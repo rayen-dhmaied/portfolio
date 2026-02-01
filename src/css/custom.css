@@ -4,27 +4,245 @@
  * work well for content-centric websites.
  */
 
-/* You can override the default Infima variables here. */
+@import url('https://fonts.googleapis.com/css2?family=Quantico:wght@400;700&display=swap');
+
+/* Synthwave 80s Theme - Dark Neon Purple-Pink */
 :root {
-  --ifm-color-primary: #2e8555;
-  --ifm-color-primary-dark: #29784c;
-  --ifm-color-primary-darker: #277148;
-  --ifm-color-primary-darkest: #205d3b;
-  --ifm-color-primary-light: #33925d;
-  --ifm-color-primary-lighter: #359962;
-  --ifm-color-primary-lightest: #3cad6e;
+  /* Primary purple */
+  --ifm-color-primary: #6b1fa0;
+  --ifm-color-primary-dark: #5e1b8d;
+  --ifm-color-primary-darker: #571985;
+  --ifm-color-primary-darkest: #48156e;
+  --ifm-color-primary-light: #7823b3;
+  --ifm-color-primary-lighter: #8229bb;
+  --ifm-color-primary-lightest: #9a3dd0;
+  
+  /* Orange accent */
+  --ifm-accent-color: #f75922;
+  
+  /* Light mode */
+  --ifm-background-color: #ffffff;
+  --ifm-font-color-base: #2d2d2d;
+  --ifm-heading-color: #4a0e78;
+  --ifm-link-color: #6b1fa0;
+  
   --ifm-code-font-size: 95%;
-  --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.1);
+  --docusaurus-highlighted-code-line-bg: rgba(107, 31, 160, 0.1);
+
+  --ifm-font-family-base: 'Quantico', 'Arial Narrow', sans-serif;
+  --ifm-heading-font-family: 'Quantico', sans-serif;
 }
 
-/* For readability concerns, you should choose a lighter palette in dark mode. */
+/* Dark mode */
 [data-theme='dark'] {
-  --ifm-color-primary: #25c2a0;
-  --ifm-color-primary-dark: #21af90;
-  --ifm-color-primary-darker: #1fa588;
-  --ifm-color-primary-darkest: #1a8870;
-  --ifm-color-primary-light: #29d5b0;
-  --ifm-color-primary-lighter: #32d8b4;
-  --ifm-color-primary-lightest: #4fddbf;
-  --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.3);
+  /* Primary purple */
+  --ifm-color-primary: #8b3dff;
+  --ifm-color-primary-dark: #7a23ff;
+  --ifm-color-primary-darker: #7016f5;
+  --ifm-color-primary-darkest: #5c12ca;
+  --ifm-color-primary-light: #9c57ff;
+  --ifm-color-primary-lighter: #ad71ff;
+  --ifm-color-primary-lightest: #be8bff;
+  
+  /* Orange accent */
+  --ifm-accent-color: #ff6b35;
+  
+  /* Backgrounds */
+  --ifm-background-color: #0d0221;
+  --ifm-background-surface-color: #1a0b2e;
+  
+  /* Text */
+  --ifm-font-color-base: #e8e4f3;
+  --ifm-heading-color: #d4c5f9;
+  --ifm-link-color: #8b3dff;
+  --ifm-link-hover-color: #ff6b35;
+  
+  --docusaurus-highlighted-code-line-bg: rgba(139, 61, 255, 0.15);
+}
+
+/* Typography */
+h1 {
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  text-transform: uppercase;
+}
+
+h2 {
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+h3,
+h4 {
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+a {
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+code {
+  font-weight: 500;
+  background-color: #f5f2ff;
+  color: #6b1fa0;
+}
+
+pre {
+  background-color: #f5f2ff;
+}
+
+th {
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* Dark mode typography */
+[data-theme='dark'] h1 {
+  background: linear-gradient(120deg, #6b1fa0 0%, #d946ef 40%, #ec4899 70%, #f97316 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+[data-theme='dark'] h2 {
+  background: linear-gradient(120deg, #7c3aed 0%, #c026d3 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+[data-theme='dark'] h3,
+[data-theme='dark'] h4 {
+  color: #a855f7;
+}
+
+[data-theme='dark'] a:hover {
+  color: #ff6b35;
+}
+
+[data-theme='dark'] code {
+  background-color: #000000;
+  color: #c77dff;
+  border: 1px solid rgba(139, 61, 255, 0.4);
+}
+
+[data-theme='dark'] pre {
+  background-color: #000000;
+  border: 1px solid rgba(139, 61, 255, 0.3);
+}
+
+[data-theme='dark'] th {
+  background: rgba(26, 11, 46, 0.6);
+  border-bottom: 2px solid #8b3dff;
+  color: #d4c5f9;
+}
+
+/* Components */
+.button--primary {
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  transition: all 0.2s ease;
+  background: linear-gradient(135deg, #4a0e78 0%, #6b1fa0 100%);
+  border: 1px solid rgba(107, 31, 160, 0.5);
+}
+
+.button--primary:hover {
+  transform: translateY(-2px);
+}
+
+.menu__link--active {
+  font-weight: 600;
+  background: linear-gradient(90deg, rgba(107, 31, 160, 0.15) 0%, transparent 100%);
+  border-left: 3px solid #f75922;
+  color: #f75922;
+}
+
+.table-of-contents__link--active {
+  font-weight: 600;
+  color: #ff6b35;
+}
+
+.tabs__item--active {
+  font-weight: 600;
+}
+
+.badge {
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* Dark mode components */
+[data-theme='dark'] .navbar {
+  background: linear-gradient(135deg, #1a0b2e 0%, #0d0221 50%, #16001e 100%);
+  border-bottom: 1px solid rgba(139, 61, 255, 0.3);
+}
+
+[data-theme='dark'] .footer {
+  background: linear-gradient(to top, #000000 0%, #0d0221 100%);
+  border-top: 1px solid rgba(139, 61, 255, 0.2);
+}
+
+[data-theme='dark'] .button--primary {
+  border: 1px solid rgba(139, 61, 255, 0.5);
+}
+
+[data-theme='dark'] .button--primary:hover {
+  background: linear-gradient(135deg, #8b3dff 0%, #ff6b35 100%);
+  border-color: #ff6b35;
+  box-shadow: 0 4px 12px rgba(255, 107, 53, 0.3);
+}
+
+[data-theme='dark'] .card {
+  background: rgba(26, 11, 46, 0.8);
+  border: 1px solid rgba(139, 61, 255, 0.3);
+  backdrop-filter: blur(10px);
+}
+
+[data-theme='dark'] .menu {
+  background: rgba(13, 2, 33, 0.6);
+}
+
+[data-theme='dark'] .menu__link--active {
+  background: linear-gradient(90deg, rgba(139, 61, 255, 0.2) 0%, transparent 100%);
+  border-left: 3px solid #ff6b35;
+  color: #ff6b35;
+}
+
+[data-theme='dark'] .table-of-contents {
+  border-left: 2px solid rgba(139, 61, 255, 0.3);
+}
+
+[data-theme='dark'] .navbar__search-input {
+  background: rgba(26, 11, 46, 0.6);
+  border: 1px solid rgba(139, 61, 255, 0.3);
+  color: #e8e4f3;
+}
+
+[data-theme='dark'] blockquote {
+  border-left: 4px solid #ff6b35;
+  background: rgba(26, 11, 46, 0.4);
+  color: #d4c5f9;
+}
+
+[data-theme='dark'] table {
+  border: 1px solid rgba(139, 61, 255, 0.2);
+}
+
+[data-theme='dark'] tr:hover {
+  background: rgba(139, 61, 255, 0.05);
+}
+
+[data-theme='dark'] .tabs__item--active {
+  border-bottom: 2px solid #ff6b35;
+  color: #ff6b35;
+}
+
+[data-theme='dark'] .badge {
+  background: linear-gradient(135deg, #4a0e78 0%, #6b1fa0 100%);
+  border: 1px solid rgba(139, 61, 255, 0.5);
 }
