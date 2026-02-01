@@ -8,16 +8,60 @@
   text-align: center;
   position: relative;
   overflow: hidden;
+  color: #000;
+  font-weight: 700;
+  background: linear-gradient(135deg, 
+    rgba(107, 31, 160, 0.05) 0%, 
+    rgba(247, 89, 34, 0.03) 50%, 
+    rgba(107, 31, 160, 0.05) 100%);
 }
 
+.heroBanner::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: 
+    linear-gradient(rgba(107, 31, 160, 0.15) 2px, transparent 2px),
+    linear-gradient(90deg, rgba(107, 31, 160, 0.15) 2px, transparent 2px),
+    linear-gradient(rgba(107, 31, 160, 0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(107, 31, 160, 0.08) 1px, transparent 1px);
+  background-size: 150px 150px, 150px 150px, 30px 30px, 30px 30px;
+  transform: perspective(500px) rotateX(60deg) translateZ(-100px);
+  transform-origin: center top;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.heroBanner > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* Dark mode */
+[data-theme='dark'] .heroBanner {
+  color: #fff;
+  background: linear-gradient(135deg, 
+    rgba(139, 61, 255, 0.15) 0%, 
+    rgba(13, 2, 33, 0.8) 30%,
+    rgba(26, 11, 46, 0.6) 50%,
+    rgba(13, 2, 33, 0.8) 70%,
+    rgba(255, 107, 53, 0.12) 100%);
+}
+
+[data-theme='dark'] .heroBanner::before {
+  background-image: 
+    linear-gradient(rgba(139, 61, 255, 0.3) 2px, transparent 2px),
+    linear-gradient(90deg, rgba(139, 61, 255, 0.3) 2px, transparent 2px),
+    linear-gradient(rgba(255, 107, 53, 0.2) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 107, 53, 0.2) 1px, transparent 1px);
+}
+
+/* Responsive */
 @media screen and (max-width: 996px) {
   .heroBanner {
     padding: 2rem;
   }
-}
-
-.buttons {
-  display: flex;
-  align-items: center;
-  justify-content: center;
 }
