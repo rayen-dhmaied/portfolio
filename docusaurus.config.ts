@@ -15,7 +15,7 @@ const config: Config = {
   },
 
   // Set the production url of your site here
-  url: 'https://rayeb-dhmaied.github.io',
+  url: 'https://rayen-dhmaied.github.io',
   // Set the /<baseUrl>/ pathname under which your site is served
   // For GitHub pages deployment, it is often '/<projectName>/'
   baseUrl: '/',
@@ -39,10 +39,9 @@ const config: Config = {
     [
       'classic',
       {
-        docs: {
-          sidebarPath: './sidebars.ts',
-        },
+        docs: false, // Disable the default docs instance
         blog: {
+          path: './content/blog',
           showReadingTime: true,
           feedOptions: {
             type: ['rss', 'atom'],
@@ -59,7 +58,26 @@ const config: Config = {
       } satisfies Preset.Options,
     ],
   ],
-
+  plugins: [
+    [
+      '@docusaurus/plugin-content-docs',
+      {
+        // id omitted => default instance
+        path: './content/resume',
+        routeBasePath: 'resume',
+        sidebarPath: './sidebars.ts',
+      },
+    ],
+    [
+      '@docusaurus/plugin-content-docs',
+      {
+        id: 'projects',
+        path: './content/projects',
+        routeBasePath: 'projects',
+        sidebarPath: './sidebars.ts',
+      },
+    ],
+  ],
   themeConfig: {
     colorMode: {
       defaultMode: 'dark',
@@ -73,11 +91,17 @@ const config: Config = {
       items: [
         {
           type: 'docSidebar',
-          sidebarId: 'tutorialSidebar',
+          sidebarId: 'resumeSidebar',
           position: 'left',
-          label: 'Tutorial',
+          label: 'Resume',
         },
-        {to: '/projects', label: 'Projects', position: 'left'},
+        {
+          type: 'docSidebar',
+          sidebarId: 'projectsSidebar',
+          position: 'left',
+          label: 'Projects',
+          docsPluginId: 'projects',
+        },
         {to: '/blog', label: 'Blog', position: 'left'},
         {
           href: 'https://github.com/rayen-dhmaied/portfolio',
