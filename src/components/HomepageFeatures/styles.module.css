@@ -1,11 +1,43 @@
-.features {
+.expertises {
   display: flex;
   align-items: center;
   padding: 2rem 0;
   width: 100%;
 }
 
-.featureSvg {
-  height: 200px;
-  width: 200px;
+.keyNumbers {
+  display: flex;
+  align-items: center;
+  padding: 3rem 0;
+  width: 100%;
+}
+
+.keyNumber {
+  padding: 2rem 1rem;
+}
+
+.numberValue {
+  font-size: 3.5rem;
+  font-weight: 700;
+  color: var(--ifm-color-primary);
+  line-height: 1.2;
+  margin-bottom: 0.5rem;
+}
+
+.numberLabel {
+  font-size: 1rem;
+  color: var(--ifm-color-emphasis-700);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+@media screen and (max-width: 996px) {
+  .numberValue {
+    font-size: 2.5rem;
+  }
+  
+  .keyNumber {
+    padding: 1.5rem 1rem;
+  }
 }

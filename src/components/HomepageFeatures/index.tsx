@@ -1,48 +1,27 @@
-import type {ReactNode} from 'react';
+import type { ReactNode } from 'react';
 import clsx from 'clsx';
 import Heading from '@theme/Heading';
 import styles from './styles.module.css';
 
-type FeatureItem = {
+type ExpertiseItem = {
   title: string;
-  description: ReactNode;
+  description: string;
 };
 
-const FeatureList: FeatureItem[] = [
-  {
-    title: 'Cloud Architecture',
-    description: (
-      <>
-        Design and maintain cloud infrastructure that reliably supports applications
-        at scale. Ensure high availability, fast recovery from failures, and clear
-        visibility into system performance, while optimizing resource usage and costs.
-      </>
-    ),
-  },
-  {
-    title: 'DevOps & Automation',
-    description: (
-      <>
-        Automate deployments, infrastructure provisioning, and operational tasks
-        to reduce manual work and errors. Enable teams to release features faster
-        and with confidence by providing consistent, repeatable workflows.
-      </>
-    ),
-  },
-  {
-    title: 'Backend & Platform Engineering',
-    description: (
-      <>
-        Develop backend services and internal platforms that are reliable, maintainable,
-        and efficient. Focus on building systems that help teams deliver products
-        safely, handle growing traffic, and are easy to operate in production.
-      </>
-    ),
-  },
-];
+type KeyNumberItem = {
+  label: string;
+  value: string;
+};
 
+type ExpertisesProps = {
+  expertises: ExpertiseItem[];
+};
 
-function Feature({title, Svg, description}: FeatureItem) {
+type KeyNumbersProps = {
+  keyNumbers: KeyNumberItem[];
+};
+
+function Expertise({ title, description }: ExpertiseItem) {
   return (
     <div className={clsx('col col--4')}>
       <div className="text--center padding-horiz--md">
@@ -53,13 +32,38 @@ function Feature({title, Svg, description}: FeatureItem) {
   );
 }
 
-export default function HomepageFeatures(): ReactNode {
+function KeyNumber({ label, value }: KeyNumberItem) {
+  return (
+    <div className={clsx('col col--4')}>
+      <div className={clsx('text--center padding-horiz--md', styles.keyNumber)}>
+        <div className={styles.numberValue}>{value}</div>
+        <div className={styles.numberLabel}>{label}</div>
+      </div>
+    </div>
+  );
+}
+
+export function Expertises( { expertises }  : ExpertisesProps): ReactNode {
   return (
     <section className={styles.features}>
       <div className="container">
         <div className="row">
-          {FeatureList.map((props, idx) => (
-            <Feature key={idx} {...props} />
+          {expertises.map((props, idx) => (
+            <Expertise key={idx} {...props} />
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+export function KeyNumbers( { keyNumbers } :  KeyNumbersProps): ReactNode {
+  return (
+    <section className={styles.keyNumbers}>
+      <div className="container">
+        <div className="row">
+          {keyNumbers.map((props, idx) => (
+            <KeyNumber key={idx} {...props} />
           ))}
         </div>
       </div>
