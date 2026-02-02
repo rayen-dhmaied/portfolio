@@ -45,6 +45,9 @@ const config: Config = {
     [
       'classic',
       {
+        gtag: {
+          trackingID: 'G-J1PJP1SJ02',
+        },
         docs: false, // Disable the default docs instance
         blog: {
           path: './content/blog',
