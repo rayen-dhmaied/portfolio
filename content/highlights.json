@@ -1,0 +1,30 @@
+{
+   "expertises": [
+        {
+            "title": "Cloud Architecture",
+            "description": "Design and maintain cloud infrastructure that reliably supports applications at scale. Ensure high availability, fast recovery from failures, and clear visibility into system performance, while optimizing resource usage and costs."
+        },
+        {
+            "title": "DevOps & Automation",
+            "description": "Automate deployments, infrastructure provisioning, and operational tasks to reduce manual work and errors. Enable teams to release features faster and with confidence by providing consistent, repeatable workflows."
+        },
+        {
+            "title": "Backend & Platform Engineering",
+            "description": "Develop backend services and internal platforms that are reliable, maintainable, and efficient. Focus on building systems that help teams deliver products safely, handle growing traffic, and are easy to operate in production."
+        }
+   ],
+   "keyNumbers":[
+        {
+            "label": "Years of Experience",
+            "value": "3+"
+        },
+        {
+            "label": "Cloud Certifications",
+            "value": "4"
+        },
+        {
+            "label": "Projects Delivered",
+            "value": "5+"
+        }
+   ]
+}
