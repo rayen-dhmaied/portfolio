@@ -8,6 +8,12 @@ const config: Config = {
   title: 'Rayen Dhmaied',
   tagline: 'Cloud & DevOps Engineer',
   favicon: 'img/logo.png',
+  customFields:{
+    github: 'rayen-dhmaied',
+    linkedin: 'rayen-dhmaied',
+    email: 'rayen.dhmaied@horizon-tech.tn',
+    phone: '+216 50 123 456',
+  },
 
   // Future flags, see https://docusaurus.io/docs/api/docusaurus-config#future
   future: {
