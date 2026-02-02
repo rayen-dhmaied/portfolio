@@ -25,7 +25,6 @@ All portfolio content lives in the `content` directory:
         ├── images
         ├── profile.md
         └── skills.md
-
 ```
 
 ### Modifying Content
