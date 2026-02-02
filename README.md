@@ -1,41 +1,59 @@
-# Website
+# Synthwave Docs Portfolio
 
-This website is built using [Docusaurus](https://docusaurus.io/), a modern static website generator.
+This project is a **documentation-first personal portfolio built with Docusaurus**, created to reflect how I work as a Cloud and DevOps Engineer. It combines synthwave-inspired aesthetics with clean, well-organized documentation to showcase projects, experience, and writing in a structured, maintainable way.
+
+
+## Content Structure
+
+All portfolio content lives in the `content` directory:
+
+```text    
+.
+├── docusaurus.config.ts
+└── content
+    ├── blog
+    │   ├── authors.yml
+    │   ├── tags.yml
+    │   └── welcome.md
+    ├── highlights.json
+    ├── projects
+    │   └── intro.md
+    └── resume
+        ├── certifications.md
+        ├── education.md
+        ├── experience.md
+        ├── images
+        ├── profile.md
+        └── skills.md
+
+```
+
+### Modifying Content
+
+To update portfolio content and personal information, you only need to edit `docusauurs.config.ts` and the files inside the `content` directory.
 
 ## Installation
 
 ```bash
-yarn
+npm install
 ```
+
+Install project dependencies.
+
 
 ## Local Development
 
 ```bash
-yarn start
+npm run start
 ```
 
-This command starts a local development server and opens up a browser window. Most changes are reflected live without having to restart the server.
+Starts a local development server with live reload.
+
 
 ## Build
 
 ```bash
-yarn build
+npm run build
 ```
 
-This command generates static content into the `build` directory and can be served using any static contents hosting service.
-
-## Deployment
-
-Using SSH:
-
-```bash
-USE_SSH=true yarn deploy
-```
-
-Not using SSH:
-
-```bash
-GIT_USER=<Your GitHub username> yarn deploy
-```
-
-If you are using GitHub pages for hosting, this command is a convenient way to build the website and push to the `gh-pages` branch.
+Generates static files in the `build` directory for static hosting.
