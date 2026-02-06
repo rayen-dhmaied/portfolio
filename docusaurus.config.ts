@@ -12,7 +12,7 @@ const config: Config = {
     github: 'rayen-dhmaied',
     linkedin: 'rayen-dhmaied',
     email: 'rayen.dhmaied@horizon-tech.tn',
-    phone: '+216 50 123 456',
+    phone: '+216 00 000 000',
   },
 
   // Future flags, see https://docusaurus.io/docs/api/docusaurus-config#future
@@ -67,6 +67,10 @@ const config: Config = {
       } satisfies Preset.Options,
     ],
   ],
+  markdown: {
+    mermaid: true,
+  },
+  themes: ['@docusaurus/theme-mermaid'],
   plugins: [
     [
       '@docusaurus/plugin-content-docs',
@@ -88,6 +92,10 @@ const config: Config = {
     ],
   ],
   themeConfig: {
+    image: 'img/social-card.png',
+    mermaid: {
+      theme: {light: 'neutral', dark: 'neutral'},
+    },
     colorMode: {
       defaultMode: 'dark',
     },
