@@ -7,6 +7,8 @@ Hi there.
 
 This space is where I share work in more detail. It includes projects I’ve worked on, practical notes, and observations from things I’ve built or learned along the way.
 
+<!-- truncate -->
+
 The focus is on showing how things were done, the decisions behind them, and what worked or didn’t. It's the kind of context that doesn’t fit in a resume or quick summary.
 
 ### What You’ll Find Here
