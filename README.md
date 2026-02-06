@@ -5,7 +5,7 @@ This project is a **documentation-first personal portfolio built with Docusaurus
 
 ## Content Structure
 
-All portfolio content lives in the `content` directory:
+All portfolio content lives in these files:
 
 ```text    
 .
