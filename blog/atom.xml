@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?><?xml-stylesheet type="text/xsl" href="atom.xsl"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+    <id>https://rayen-dhmaied.github.io/portfolio/blog</id>
+    <title>Rayen Dhmaied Blog</title>
+    <updated>2026-02-01T21:52:22.000Z</updated>
+    <generator>https://github.com/jpmonette/feed</generator>
+    <link rel="alternate" href="https://rayen-dhmaied.github.io/portfolio/blog"/>
+    <subtitle>Rayen Dhmaied Blog</subtitle>
+    <icon>https://rayen-dhmaied.github.io/portfolio/img/logo.png</icon>
+    <entry>
+        <title type="html"><![CDATA[Welcome to my blog]]></title>
+        <id>https://rayen-dhmaied.github.io/portfolio/blog/welcome</id>
+        <link href="https://rayen-dhmaied.github.io/portfolio/blog/welcome"/>
+        <updated>2026-02-01T21:52:22.000Z</updated>
+        <summary type="html"><![CDATA[Hi there.]]></summary>
+        <content type="html"><![CDATA[<p>Hi there.</p>
+<p>This space is where I share work in more detail. It includes projects I’ve worked on, practical notes, and observations from things I’ve built or learned along the way.</p>
+<p>The focus is on showing how things were done, the decisions behind them, and what worked or didn’t. It's the kind of context that doesn’t fit in a resume or quick summary.</p>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="what-youll-find-here">What You’ll Find Here<a href="https://rayen-dhmaied.github.io/portfolio/blog/welcome#what-youll-find-here" class="hash-link" aria-label="Direct link to What You’ll Find Here" title="Direct link to What You’ll Find Here" translate="no">​</a></h3>
+<ul>
+<li class="">🛠 Project overviews and technical decisions</li>
+<li class="">📈 Results and outcomes</li>
+<li class="">🧩 Problem-solving approaches</li>
+<li class="">✍️ Notes on tools, ideas, and lessons learned</li>
+</ul>
+<p>The goal is to keep a record of my work while also creating a resource others might find useful. Whether you’re exploring similar problems or just curious about the process, there’s something here for you.</p>
+<p>Thanks for reading.</p>]]></content>
+        <author>
+            <name>Rayen Dhmaied</name>
+            <uri>https://rayen-dhmaied.github.io/portfolio</uri>
+        </author>
+    </entry>
+</feed>

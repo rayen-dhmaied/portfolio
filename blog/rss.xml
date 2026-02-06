@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?><?xml-stylesheet type="text/xsl" href="rss.xsl"?>
+<rss version="2.0" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:content="http://purl.org/rss/1.0/modules/content/">
+    <channel>
+        <title>Rayen Dhmaied Blog</title>
+        <link>https://rayen-dhmaied.github.io/portfolio/blog</link>
+        <description>Rayen Dhmaied Blog</description>
+        <lastBuildDate>Sun, 01 Feb 2026 21:52:22 GMT</lastBuildDate>
+        <docs>https://validator.w3.org/feed/docs/rss2.html</docs>
+        <generator>https://github.com/jpmonette/feed</generator>
+        <language>en</language>
+        <item>
+            <title><![CDATA[Welcome to my blog]]></title>
+            <link>https://rayen-dhmaied.github.io/portfolio/blog/welcome</link>
+            <guid>https://rayen-dhmaied.github.io/portfolio/blog/welcome</guid>
+            <pubDate>Sun, 01 Feb 2026 21:52:22 GMT</pubDate>
+            <description><![CDATA[Hi there.]]></description>
+            <content:encoded><![CDATA[<p>Hi there.</p>
+<p>This space is where I share work in more detail. It includes projects I’ve worked on, practical notes, and observations from things I’ve built or learned along the way.</p>
+<p>The focus is on showing how things were done, the decisions behind them, and what worked or didn’t. It's the kind of context that doesn’t fit in a resume or quick summary.</p>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="what-youll-find-here">What You’ll Find Here<a href="https://rayen-dhmaied.github.io/portfolio/blog/welcome#what-youll-find-here" class="hash-link" aria-label="Direct link to What You’ll Find Here" title="Direct link to What You’ll Find Here" translate="no">​</a></h3>
+<ul>
+<li class="">🛠 Project overviews and technical decisions</li>
+<li class="">📈 Results and outcomes</li>
+<li class="">🧩 Problem-solving approaches</li>
+<li class="">✍️ Notes on tools, ideas, and lessons learned</li>
+</ul>
+<p>The goal is to keep a record of my work while also creating a resource others might find useful. Whether you’re exploring similar problems or just curious about the process, there’s something here for you.</p>
+<p>Thanks for reading.</p>]]></content:encoded>
+        </item>
+    </channel>
+</rss>
