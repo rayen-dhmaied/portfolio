@@ -97,7 +97,7 @@ const config: Config = {
       theme: {light: 'neutral', dark: 'neutral'},
     },
     colorMode: {
-      defaultMode: 'dark',
+      respectPrefersColorScheme: true,
     },
     navbar: {
       title: 'rayen-dhmaied',
