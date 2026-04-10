@@ -1,6 +1,6 @@
-# Synthwave Docs Portfolio
+# Docs Portfolio
 
-This project is a **documentation-first personal portfolio built with Docusaurus**, created to reflect how I work as a Cloud and DevOps Engineer. It combines synthwave-inspired aesthetics with clean, well-organized documentation to showcase projects, experience, and writing in a structured, maintainable way.
+This project is a **documentation-first personal portfolio built with Docusaurus**, created to reflect how I work as a Cloud and DevOps Engineer. It's a well-organized documentation to showcase projects, experience, and writing in a structured, maintainable way.
 
 
 ## Content Structure
