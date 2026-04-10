@@ -23,7 +23,6 @@ All portfolio content lives in these files:
         ├── education.md
         ├── experience.md
         ├── images
-        ├── profile.md
         └── skills.md
 ```
 
