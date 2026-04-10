@@ -350,6 +350,12 @@ code, pre, kbd { font-family: var(--font-mono); }
 
 .theme-doc-breadcrumbs { font-family: var(--font-body); font-size: 0.875rem; color: var(--portfolio-ink-3); }
 
+.breadcrumbs__item:first-child .breadcrumbs__link {
+  line-height: 1;
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
 /* ─── Doc footer ─────────────────────────────────────────── */
 
 .theme-doc-footer { border-top: 1px solid var(--portfolio-gold-dim); padding-top: 1.5rem; }
