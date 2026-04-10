@@ -20,6 +20,7 @@ I was working on an older Terraform project that managed a full EKS stack: VPC, 
 It was obvious that I had to break things into modules. But how to do it without accidentally destroying anything is what I'm going to talk about.
 
 <!-- truncate -->
+---
 
 ## Why This Isn't Straightforward
 
@@ -41,6 +42,8 @@ The fix is `terraform state mv`. It renames the address of a resource in the sta
 2. Move the state addresses
 3. Run `plan` and verify zero changes before doing anything else
 
+---
+
 ## Deciding What Becomes a Module
 
 Three questions to ask before you start:
@@ -58,6 +61,8 @@ module "vpc" → module "eks" → module "addons"
 ```
 
 Each arrow represents a dependency, an output on one side and a variable on the other. If two groups of resources reference each other in both directions, they belong in the same module.
+
+---
 
 ## Audit the State First
 
@@ -181,6 +186,7 @@ output "all_subnet_ids" {
   )
 }
 ```
+---
 
 ## Provider Declarations in Modules
 
@@ -200,6 +206,8 @@ terraform {
 ```
 
 You don't configure the provider inside the module (no region, no credentials). That stays in the root. The module just declares what it needs, and then you pass it from the root `main.tf`. Only declare providers in the module that are not under the `hashicorp` namespace.
+
+---
 
 ## Updating the Root
 
@@ -241,6 +249,7 @@ module "addons" {
   # ...
 }
 ```
+---
 
 ## Moving the State
 
@@ -287,6 +296,8 @@ done
 ```
 
 It's better to create a bash script to move Terraform state instead of doing it manually, to avoid errors. Make sure to put `set -e` after `#!/bin/bash` to stop script execution at the first error.
+
+---
 
 ## Expected Plan Output
 
