@@ -42,14 +42,14 @@ sidebar_position: 2
 :::note[Key Highlights]
 
 - Built custom internal platform replacing expensive third-party system
-- Managed **100+ MySQL tables** with NestJS, React, and Prisma
+- Managed **100+ SQL tables** with NestJS, React, and Prisma
 
 <details>
 <summary>View all responsibilities</summary>
 
-- Developed a custom internal platform using NestJS, React and Prisma to replace an expensive third-party system, allowing developers to easily view and manage 100+ MySQL tables.
-- Implemented operations logging and role-based user management to ensure data integrity and security.
-- Deployed the platform with Docker and AWS ECS, enabling reliable and faster environment provisioning.
+- Developed a custom internal platform using NestJS, React, and Prisma to replace an expensive third-party system, allowing developers to easily manage 100+ database tables.
+- Implemented operations logging and role-based access control to ensure data integrity and security across the platform.
+- Deployed the platform using Docker and AWS ECS with CloudWatch monitoring, enabling reliable, observable, and faster environment provisioning.
 
 </details>
 
