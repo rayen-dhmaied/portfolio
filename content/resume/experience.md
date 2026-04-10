@@ -1,8 +1,7 @@
 ---
-sidebar_position: 3
+title: Professional Experience
+sidebar_position: 2
 ---
-
-# Experience
 
 ### DevOps and Site Reliability Engineer
 **CraftSchoolship** · San Jose, Remote · **Oct 2023 - Present**

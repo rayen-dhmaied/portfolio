@@ -1,8 +1,7 @@
 ---
-sidebar_position: 4
+title: Education
+sidebar_position: 3
 ---
-
-# Education
 
 ### Master of Computer Science
 **Horizon School of Digital Technologies** · **2023 - 2025**

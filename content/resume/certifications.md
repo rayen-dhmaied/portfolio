@@ -1,8 +1,7 @@
 ---
-sidebar_position: 5
+title: Certifications
+sidebar_position: 4
 ---
-
-# Certifications
 
 export const Cert = ({img, title, url}) => (
   <div style={{textAlign: 'center'}}>
