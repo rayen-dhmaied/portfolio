@@ -12,6 +12,7 @@ const config: Config = {
     github: 'rayen-dhmaied',
     linkedin: 'rayen-dhmaied',
     email: 'rayen.dhmaied@horizon-tech.tn',
+    bio: "Keeping the infrastructure out of the way so developers can focus on building.",
     phone: '+216 00 000 000',
   },
 
@@ -100,7 +101,7 @@ const config: Config = {
       respectPrefersColorScheme: true,
     },
     navbar: {
-      title: 'rayen-dhmaied',
+      title: "Rayen's Portfolio",
       logo: {
         alt: 'Logo',
         src: 'img/logo.png',
@@ -109,21 +110,20 @@ const config: Config = {
         {
           type: 'docSidebar',
           sidebarId: 'resumeSidebar',
-          position: 'left',
+          position: 'right',
           label: 'Resume',
         },
         {
           type: 'docSidebar',
           sidebarId: 'projectsSidebar',
-          position: 'left',
+          position: 'right',
           label: 'Projects',
           docsPluginId: 'projects',
         },
-        {to: '/blog', label: 'Blog', position: 'left'},
         {
-          href: 'https://github.com/rayen-dhmaied/portfolio',
-          label: 'GitHub',
-          position: 'right',
+          to: '/blog',
+          label: 'Blog',
+          position: 'right'
         },
       ],
     },
