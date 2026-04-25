@@ -3,28 +3,28 @@
 /* ─── Tokens ─────────────────────────────────────────────── */
 
 :root {
-  --portfolio-bg: #f4efe6;
-  --portfolio-surface: #fff8ee;
-  --portfolio-ink: #1e1a4a;
-  --portfolio-ink-2: #6058a0;
-  --portfolio-ink-3: #a89fc0;
-  --portfolio-gold: #b8923a;
-  --portfolio-gold-dim: #e8dcc8;
-  --portfolio-soft-bg: #ede8f8;
-  --portfolio-soft-fg: #4a4490;
-  --portfolio-card-border: #e4dbd0;
+  --portfolio-bg: #fafafc;
+  --portfolio-surface: #f4f4f8;
+  --portfolio-ink: #0f0f1f;
+  --portfolio-ink-2: #4d4f6f;
+  --portfolio-ink-3: #9498b3;
+  --portfolio-gold: #5b5bd6;
+  --portfolio-gold-dim: #e8e8ff;
+  --portfolio-soft-bg: #eeeefb;
+  --portfolio-soft-fg: #3939a3;
+  --portfolio-card-border: #e1e2eb;
 
   --font-heading: 'Bebas Neue', system-ui, sans-serif;
   --font-body: 'PT Sans', system-ui, sans-serif;
   --font-mono: 'JetBrains Mono', monospace;
 
-  --ifm-color-primary: #4a4490;
-  --ifm-color-primary-dark: #3d3880;
-  --ifm-color-primary-darker: #363070;
-  --ifm-color-primary-darkest: #262256;
-  --ifm-color-primary-light: #5750a0;
-  --ifm-color-primary-lighter: #6058a8;
-  --ifm-color-primary-lightest: #7870b8;
+  --ifm-color-primary: #5b5bd6;
+  --ifm-color-primary-dark: #4848c2;
+  --ifm-color-primary-darker: #3939a3;
+  --ifm-color-primary-darkest: #2a2a7d;
+  --ifm-color-primary-light: #7070e0;
+  --ifm-color-primary-lighter: #8585e8;
+  --ifm-color-primary-lightest: #a8aaf0;
   --ifm-background-color: var(--portfolio-bg);
   --ifm-font-color-base: var(--portfolio-ink);
   --ifm-font-family-base: var(--font-body);
@@ -46,17 +46,17 @@
 }
 
 [data-theme='dark'] {
-  --portfolio-bg: #12101e;
-  --portfolio-surface: #1e1c30;
-  --portfolio-ink: #eae6ff;
-  --portfolio-ink-2: #9890d0;
-  --portfolio-ink-3: #4a4568;
-  --portfolio-gold: #c8a050;
-  --portfolio-gold-dim: #2a2418;
-  --portfolio-soft-bg: #262248;
-  --portfolio-soft-fg: #a098e0;
-  --portfolio-card-border: #2e2a48;
-  --ifm-color-primary: #9890d0;
+  --portfolio-bg: #08081a;
+  --portfolio-surface: #10101e;
+  --portfolio-ink: #e8e9f0;
+  --portfolio-ink-2: #9092b0;
+  --portfolio-ink-3: #54577a;
+  --portfolio-gold: #7e7df0;
+  --portfolio-gold-dim: #1d1d3d;
+  --portfolio-soft-bg: #181830;
+  --portfolio-soft-fg: #a8aaf0;
+  --portfolio-card-border: #1c1e30;
+  --ifm-color-primary: #7e7df0;
   --ifm-navbar-background-color: var(--portfolio-bg);
   --ifm-footer-background-color: var(--portfolio-surface);
 }
@@ -106,22 +106,22 @@ h6 {
 h1 + h2, h2 + h3, h3 + h4, h4 + h5, h5 + h6 { margin-top: 1rem; }
 
 [data-theme='dark'] h1 {
-  background: linear-gradient(120deg, #6058a0, #c8a050 50%, #eae6ff);
+  background: linear-gradient(120deg, #7e7df0, #a8aaf0 50%, #e8e9f0);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
 
 [data-theme='dark'] h2 {
-  background: linear-gradient(120deg, #9890d0, #c8a050);
+  background: linear-gradient(120deg, #a8aaf0, #7e7df0);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
 
 [data-theme='dark'] h3,
-[data-theme='dark'] h4 { color: #a098e0; }
+[data-theme='dark'] h4 { color: #a8aaf0; }
 
 [data-theme='dark'] h5,
-[data-theme='dark'] h6 { color: #9890d0; }
+[data-theme='dark'] h6 { color: #9092b0; }
 
 /* ─── Body text ──────────────────────────────────────────── */
 
