@@ -1,25 +1,41 @@
 ---
-title: DeployCenter - Deployment Management Platform
-tags: [AWS, EKS, Kubernetes, ArgoCD, GitOps, Keycloak, Flask, React, CI/CD, CloudFront, S3]
-description: Web-based platform automating customer application deployments to Kubernetes clusters with GitOps workflow, reducing deployment time from 15 minutes to 3 minutes.
+title: DeployCenter - Multi-Tenant Kubernetes Deployment Platform
+tags: [AWS, EKS, Kubernetes, ArgoCD, GitOps, Keycloak, Flask, React, Jinja2, GitHub Actions, CI/CD, CloudFront, S3]
+description: Internal platform that provisions customer apps on multi-region EKS through a React dashboard or a Git-driven pipeline. Cut per-app deploy time from 15 minutes to 3.
 ---
 
 ## Overview
 
 ### What it is
-Internal web-based platform that automates the deployment of customer applications to multiple Kubernetes clusters. Provides secure dashboard for company developers to manage deployments through a template-driven workflow instead of manual manifest creation.
+An internal platform that provisions customer apps on multi-region EKS clusters. It currently runs Odoo, Moodle, and Mattermost, and new apps onboard by adding a template set. Engineers deploy through a React dashboard backed by Flask, or commit to a single `customers.yaml` file that triggers the same pipeline.
 
 ### Why it exists
-Previously, deploying customer applications required manually creating Kubernetes manifests, filling Helm values, and provisioning AWS resources - taking ~15 minutes per application with high risk of human error. Needed a standardized, secure, and efficient way for internal developers to deploy customer applications.
+Deploying a customer app used to mean writing Kubernetes manifests by hand, filling Helm values, provisioning EFS volumes and Route53 records in the AWS console, then committing to Git. Each app took 15 minutes and broke when someone mistyped a value.
+
+The team needed both paths: YAML for engineers who already lived in the repo, and a UI for support staff and junior developers who should deploy without write access.
 
 ### Outcome
 
 :::tip Key Results
-- **80% time reduction** - From ~15 minutes to ~3 minutes per deployment
-- **Zero manual manifest creation** - Automated generation from templates
-- **Secure access control** - Keycloak SSO integration with role-based permissions
-- **Full GitOps workflow** - Declarative deployments with Git as single source of truth
+- Per-app deploy time: 15 minutes down to 3
+- 20+ customers running on 3 AWS regions, no hand-written manifests
+- Extensible to new apps via a template set, not a fork
+- One automation engine behind two entry points (Git push or dashboard)
+- Keycloak SSO with viewer, deployer, and admin roles
+- Idempotent operations against AWS, GitHub, and ArgoCD
 :::
+
+---
+
+## Background
+
+The platform began as one repo: a `customers.yaml`, a Python script, and a GitHub Actions workflow. Engineers edited the YAML and pushed to `main`. The workflow rendered manifests, provisioned AWS resources, and committed to per-customer branches. ArgoCD synced the result.
+
+That worked for the platform team. It did not work for support engineers and junior developers, who also needed to deploy customer apps. Giving them write access to the repo meant trusting every YAML edit on `main`. Walking each newcomer through Git, conflict resolution, and CI failures took days.
+
+I built **DeployCenter** on top of the existing automation. The Python orchestrator became an importable package. Flask wrapped it with auth, input validation, and a PostgreSQL audit trail, and the React dashboard sat in front. Keycloak roles let a support engineer trigger a Mattermost redeploy without ever touching the repo.
+
+The original Git-driven workflow kept running. Today, platform engineers push `customers.yaml` for batch changes; support staff click through the dashboard for one-off deploys. Both routes share one renderer and one set of provisioning code.
 
 ---
 
@@ -29,138 +45,132 @@ Previously, deploying customer applications required manually creating Kubernete
 
 ![DeployCenter Architecture](./images/deploy-center/arch.png)
 
+### How a Deploy Flows
+
+Both paths run through the same Python orchestration core.
+
+**Git-driven path:** an engineer edits `customers.yaml` on `main`. GitHub Actions runs the orchestrator, which renders manifests, provisions AWS resources, and commits to per-customer branches. ArgoCD detects the change and syncs to the target cluster.
+
+**UI-driven path:** a developer signs in through Keycloak, fills a form on the React dashboard, and clicks deploy. The Flask backend invokes the same orchestrator code and writes audit records to PostgreSQL.
+
 :::info Key Components
-**DeployCenter** (React frontend + Flask backend) → **Keycloak SSO** (authentication/authorization) → **GitHub API** (manifest storage) → **ArgoCD** (multi-cluster GitOps) → **EKS clusters** (customer apps) → **AWS** (EFS, Route53, S3)
+React dashboard (S3 + CloudFront) → Flask API (EKS) → Python orchestrator → ArgoCD (multi-cluster) → EKS clusters → AWS (EFS, Route53, S3)
+
+Parallel path: GitHub Actions → same Python orchestrator → same downstream targets
 :::
 
 ---
 
 ## Tech Stack
 
-**Backend:** Flask (Python), PostgreSQL  
-**Frontend:** React, hosted on S3 + CloudFront  
-**Authentication:** Keycloak (SSO, user management, RBAC)  
-**GitOps:** ArgoCD, Git, Helm  
-**Cloud:** AWS (EKS, EFS, Route53, Boto3)
+**Backend:** Flask, Python 3.10, PostgreSQL, Jinja2, Boto3, GitPython  
+**Frontend:** React, S3 + CloudFront  
+**Authentication:** Keycloak (OAuth2, RBAC)  
+**GitOps:** ArgoCD, Helm, GitHub  
+**Cloud:** AWS (EKS, EFS, Route53, S3, IAM OIDC)  
+**CI/CD:** GitHub Actions, Helm-based EKS rollouts
 
 ---
 
 ## Implementation Setup
 
-### Backend Development (Flask)
-Built Flask-based backend server with integrations for:
-- **Keycloak authentication:** OAuth2 flow for SSO, JWT token validation, role-based access control
-- **AWS API integration:** Automated provisioning of EFS volumes, Route53 DNS records, S3 buckets
-- **GitHub API integration:** Programmatic repository operations for manifest/values file commits
-- **ArgoCD API integration:** Application creation and sync operations across multiple clusters
-- **Template engine:** Generates Kubernetes manifests and Helm values from predefined templates
-- **Database layer:** PostgreSQL for customer metadata, application configurations, deployment templates
+### Orchestration Core
+A Python package handles every step both interfaces depend on:
+- Renders Kubernetes manifests and Helm values from Jinja2 templates using custom delimiters (`[[ ]]`) so they don't collide with Helm syntax
+- Provisions EFS filesystems and Route53 weighted A-records via Boto3, caching clients and lookups so repeat runs skip the API
+- Calls ArgoCD's REST API with exponential backoff on 429 and 5xx
+- Uses GitPython to commit generated manifests to per-customer branches
+- Treats every operation as idempotent: GET before POST, write to disk only when content differs
 
-### Frontend Development (React)
-Developed React-based dashboard featuring:
-- **Authentication:** Keycloak integration with OAuth2 flow
-- **Customer management:** Create/edit/delete customers
-- **Application deployment wizard:** Select templates, configure parameters, deploy
-- **Resource management:** View and manage available deployment templates
-- **Deployment monitoring:** Real-time status of ArgoCD sync operations
-- **Audit interface:** Deployment history and change logs
+### Flask Backend
+- Validates Keycloak JWTs on each request and checks role claims against endpoint requirements
+- Stores customer metadata, deployment history, and template definitions in PostgreSQL
+- Exposes REST endpoints for the React dashboard
+- Wraps the orchestration package so one API call coordinates AWS provisioning, Git commits, and ArgoCD application creation
+- Rolls back on failure: deletes AWS resources it created, reverts the Git commit, and removes the half-created ArgoCD app
+
+### React Frontend
+- Keycloak OAuth2 integration (authorization code flow with PKCE)
+- Customer CRUD with form validation
+- Deployment wizard: select customer, pick app template, fill region-specific values, deploy
+- ArgoCD sync status polled from the backend
+- Audit log view backed by PostgreSQL
+- Template editor that lets admins update Jinja2 sources without opening the repo
+
+### Git-Driven Path
+Two GitHub Actions workflows cover the code-first interface.
+
+The deploy workflow triggers on changes to `customers.yaml`. It assumes an AWS IAM role via OIDC (no static keys), runs the orchestrator, and pushes generated files to customer branches.
+
+The sync workflow triggers when templates or orchestrator code change on `main`. It merges `main` into every customer branch so updates propagate without anyone re-editing `customers.yaml`.
 
 ### Template System
-Created reusable templates for:
-- **Application and their resources:** Such as Odoo, Moodle, PostgreSQL.. with environment-specific configurations
-- **Kubernetes manifests:** Deployments, Services, Ingress, ConfigMaps, Secrets
-- **Helm values:** Pre-configured values with customer-specific placeholders
-- **AWS resources:** EFS access point configurations, Route53 record templates
+Templates live in the repo as Jinja2 files. Each app ships with:
+- A Helm values template for the main workload
+- An ArgoCD Application JSON for the GitOps spec
+- Resource manifests for dependencies (PostgreSQL, Redis)
 
-### Deployment Workflow
-**Automated provisioning process:**
-1. Developer logs in via Keycloak SSO
-2. Selects customer and application template from dashboard
-3. Fills in configuration parameters (domain, resources, etc.)
-4. Backend generates manifests and Helm values from templates
-5. Provisions AWS resources (EFS, Route53, S3) via boto3
-6. Commits generated files to `customers-deployments` Git repository
-7. Calls ArgoCD API to create application pointing to Git repo
-8. ArgoCD syncs application state to cluster
-9. Customer application running in ~3 minutes
+Odoo, Moodle, and Mattermost are wired up today. Adding a new app means dropping a new template set into the repo under its own name; the orchestrator picks it up without code changes.
 
-:::note GitOps Workflow
-All deployments are Git-driven. ArgoCD continuously monitors the repository and ensures cluster state matches Git state, enabling easy rollbacks and audit trails.
-:::
+Customers override values through `customers.yaml` keys (Git path) or the dashboard form (UI path). Both feed the same renderer, so a Helm values change ships once.
 
-### Multi-Cluster Management
-- **ArgoCD integration:** Single ArgoCD instance managing multiple EKS clusters
-- **Cluster routing:** Backend determines target cluster based on customer configuration
-- **Namespace isolation:** Each customer application deployed to dedicated namespace
+### Multi-Region Deployment
+Each customer maps to an AWS region (US-WEST-2, EU-SOUTH-2, EU-WEST-3). The orchestrator loads region-specific env files on demand, caches Boto3 clients per region, and routes each downstream call to the right config. Route53 weighted records spread traffic across regional endpoints.
 
 ### CI/CD Pipelines
 
-**Backend Pipeline (GitFlow):**
-- Automated testing on pull requests
-- Build Docker image for Flask application
-- Push to container registry
-- Helm chart deployment to EKS cluster
-- Rolling updates with zero downtime
+**Backend (GitFlow):** PR tests → Docker build → push to ECR → Helm upgrade on EKS with rolling updates.
 
-**Frontend Pipeline:**
-- Build React application (production bundle)
-- Upload build artifacts to S3 bucket
-- Invalidate CloudFront cache for immediate updates
-- Versioned deployments with rollback capability
+**Frontend:** React production build → S3 sync → CloudFront invalidation. Build artifacts are versioned, so rollback is one command.
 
-### Infrastructure Setup
-- **Backend hosting:** Flask application containerized and deployed to EKS via Helm chart
-- **Frontend hosting:** React SPA served from S3 bucket behind CloudFront CDN
-- **Database:** PostgreSQL for application state and metadata
-- **Storage:** EFS for customer application persistent data
-- **DNS:** Route53 for custom domain management per customer
+**Customer deployments:** GitHub Actions for the Git-driven path, Flask API for the UI path. Both produce the same manifests on the same branches.
 
 ---
 
 ## Key Challenges & Solutions
 
-### Challenge 1: Reducing Deployment Time from 15 Minutes to 3 Minutes
+### Challenge 1: Two Interfaces, One Codebase
 
-**Problem:** Manual process involved creating Kubernetes manifests, filling Helm values, provisioning AWS resources, committing to Git, and triggering ArgoCD - taking ~15 minutes and prone to errors.
+**Problem:** Some engineers wanted to keep editing `customers.yaml`. Others wanted a UI. Two parallel implementations would mean every template change had to land in two places, and the paths would drift within a sprint.
 
-**Solution:** Built template-driven automation in Flask backend that generates all required files from templates. Single API call orchestrates AWS resource provisioning, Git commits, and ArgoCD application creation. Parallel execution of independent tasks (AWS provisioning + manifest generation) reduces total time.
+**Solution:** I extracted the deployment logic into a Python package with no dependency on Flask or GitHub Actions. The CI workflow imports it. The Flask backend imports it. Both call the same `deploy_customer_app()` entrypoint with the same input shape. The dashboard converts form fields into that input; the CI workflow reads `customers.yaml` and builds it.
 
 :::success Result
-**80% time reduction** - Deployment process automated from ~15 minutes to ~3 minutes with a few clicks
+One codebase serves both interfaces. Template or provisioning changes ship once and apply everywhere.
 :::
 
 ---
 
-### Challenge 2: Integrating Four Different Systems
+### Challenge 2: Coordinating Four APIs Without Leaving Orphans
 
-**Problem:** Solution required coordinating Keycloak (authentication), GitHub (version control), ArgoCD (deployment), and AWS (infrastructure) - each with different APIs, authentication methods, and error handling patterns.
+**Problem:** A deployment touches AWS (EFS + Route53), GitHub (commit + push), and ArgoCD (project + application). When a step failed mid-flight, the system used to leave half-created EFS volumes, orphan DNS records, and Git commits referencing infrastructure that didn't exist.
 
-**Solution:** Developed service layer abstraction in Flask with dedicated modules for each integration. Implemented unified error handling, retry logic with exponential backoff, and transaction-like workflows. Created rollback mechanisms to clean up resources if any step fails.
+**Solution:** Each external call sits behind a retry layer with exponential backoff for transient failures. The full sequence runs inside a coordinator that records every resource it creates. On failure, the coordinator walks that record backward, deletes the resources it provisioned, and reverts the Git commit. Idempotency on the happy path keeps retries safe.
 
 :::success Result
-**Seamless multi-system orchestration** - Single user action triggers coordinated operations across all systems with automatic rollback on failure
+Failed deployments leave no orphan resources. Engineers retry from the dashboard or CI without manual cleanup.
 :::
 
 ---
 
-### Challenge 3: Secure Multi-Tenant Access Control
+### Challenge 3: Permissions Across Both Paths
 
-**Problem:** Multiple developers needed access with different permission levels. Some should only view deployments, others deploy, and admins manage everything. Security was critical as tool manages production customer applications.
+**Problem:** Support staff and junior engineers needed read access to deployment state. Engineers needed to trigger deploys. Template edits and customer management belonged with the platform team. Repo write access is too coarse for that split.
 
-**Solution:** Integrated Keycloak for centralized authentication and role-based access control (RBAC). Defined roles (viewer, deployer, admin) with granular permissions. Implemented OAuth2 authorization code flow in both backend (Flask) and frontend (React). All API endpoints protected with JWT token validation and role checks.
+**Solution:** Keycloak roles (`viewer`, `deployer`, `admin`) map to JWT claims. Flask middleware reads the claims off the token and checks them against per-endpoint requirements. The React dashboard hides actions the user can't perform; the backend rejects them anyway if someone hand-crafts a request. The Git-driven path inherits its permissions from GitHub branch protection: protected `main`, required reviewers for `customers.yaml` changes.
 
 :::success Result
-**Enterprise-grade security** - Role-based access control with SSO, ensuring only authorized developers can perform deployment operations
+Three permission tiers in the UI plus branch protection on the Git side. Template edits and customer onboarding stay with the platform team on either path.
 :::
 
 ---
 
-### Challenge 4: Template Management and Flexibility
+### Challenge 4: Standard Templates with per-Customer Overrides
 
-**Problem:** Different customer applications required different configurations, but wanted to avoid duplicating manifests. Needed balance between standardization and customization.
+**Problem:** Customer A wants Odoo with two replicas and a custom addon. Customer B wants Odoo with Gmail SMTP. Customer C wants Moodle on a different storage class. Forking templates per customer would balloon the maintenance surface fast.
 
-**Solution:** Created hierarchical template system with base templates for common configurations and application-specific overlays. Used Jinja2 templating engine for variable substitution. Built template management interface in frontend for adding/editing templates without code changes.
+**Solution:** I designed templates as base + override. The base renders standard Helm values. Customer-specific overrides come from `customers.yaml` keys (Git path) or the dashboard form (UI path). The renderer merges first-level keys, so customers tune what they need without touching the base. Admins edit base templates through the dashboard's template editor; changes commit back to the repo for code review.
 
 :::success Result
-**Flexible standardization** - Reusable templates reduce configuration drift while allowing customization per customer needs
+Three base templates serve 20+ customers, and a new app slots in as its own template set. Onboarding a new customer is a YAML edit or a form submission, not a template fork.
 :::
