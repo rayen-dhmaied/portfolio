@@ -24,7 +24,7 @@ sidebar_position: 2
 - Built the observability stack with Prometheus, Loki, and Grafana, an external prober for SSL and availability checks from outside the cluster, and Istio with Jaeger for distributed tracing.
 - Built Grafana dashboards for Kubernetes cluster and external EC2 instance health, application debugging, and capacity tracking.
 - Tuned PostgreSQL clusters to reduce resource usage by 35%, and automated backup and restore for Kubernetes resources and EBS/EFS persistent volumes.
-- Centralised authentication on Keycloak and managed the company workspace, cutting employee onboarding time by 70%.
+- Centralized authentication on Keycloak and managed the company workspace, cutting employee onboarding time by 70%.
 - Built and maintained REST APIs in Python and Go for payments, user management, and analytics across multiple products, including a live quiz platform with AI question generation (OpenAI), Stripe subscriptions, and LTI 1.3 integration, serving 200+ MAU.
 
 </details>
