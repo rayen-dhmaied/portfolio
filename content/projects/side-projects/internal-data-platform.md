@@ -1,10 +1,8 @@
 ---
 title: Box2Home - Internal Data Platform
 tags: [NestJS, React, Material UI, PostgreSQL, AWS, ECS, Docker, TypeScript]
-description: Internal data platform for Box2Home delivery company enabling developers to access and debug database data, replacing expensive third-party solution with custom NestJS/React application deployed on AWS ECS.
+description: Internal data and debugging platform for Box2Home, built in NestJS and React on AWS ECS to replace an expensive third-party tool.
 ---
-
-# Box2Home - Internal Data Platform
 
 [View Frontend Source Code on GitHub](https://github.com/rayen-dhmaied/box2home-frontend) →  
 [View Backend Source Code on GitHub](https://github.com/rayen-dhmaied/box2home-backend) →
@@ -12,18 +10,18 @@ description: Internal data platform for Box2Home delivery company enabling devel
 ## Overview
 
 ### What it is
-Internal platform for Box2Home delivery company providing developers with database access and debugging tools. Web-based interface for querying production data, viewing logs, and troubleshooting issues.
+An internal web app for Box2Home's developers. It lets the team query the production database, browse audit logs, and debug data issues without anyone holding direct write access to production.
 
 ### Why it exists
-Company relied on expensive third-party solution for database access and debugging. Needed cost-effective alternative with better performance and features tailored to team's workflow. Built as end-of-studies internship project.
+The company was paying a third-party SaaS for the same workflow. The bill was high, the tool didn't fit the way the team worked, and any change to that workflow had to wait for the vendor's roadmap. I built this as my end-of-studies internship project to replace it with something the team owns.
 
 ### Outcome
 
 :::tip Key Results
-- **Replaced third-party tool** - Eliminated costly subscription fees
-- **Improved performance** - Faster data queries and visualization
-- **Better UX** - Custom interface designed for team's specific needs
-- **Audit logging** - Complete tracking of database access and operations
+- Removed the third-party subscription
+- Read-only path to the production database, gated by role
+- Audit log of every query and every modification, with the user attached
+- UI shaped around the team's workflow
 :::
 
 ---
@@ -40,99 +38,97 @@ Company relied on expensive third-party solution for database access and debuggi
 ## Implementation Setup
 
 ### Backend (NestJS)
-Built modular backend following NestJS architecture:
+A modular NestJS backend with one module per concern.
 
-**Authentication & Authorization:**
-- JWT-based authentication for developer access
-- Role-based access control (admin, developer, viewer)
-- Session management and token refresh
+**Auth:**
+- JWT authentication
+- Role-based access (admin, developer, viewer)
+- Token refresh
 
 **User Management:**
-- CRUD operations for user accounts
-- Role assignment and permissions
-- User activity tracking
+- CRUD for accounts
+- Role assignment
+- Activity tracking
 
 **Data Access Modules:**
-Created service/repository/controller pattern for each data entity:
-- **Services:** Business logic for data queries and transformations
-- **Repositories:** Database interaction layer with Prisma ORM
-- **Controllers:** REST API endpoints for frontend consumption
+One controller / service / repository trio per data entity:
+- Services hold the query and transformation logic
+- Repositories talk to the database via Prisma
+- Controllers expose the REST endpoints the frontend consumes
 
-**Audit & Operations Logs:**
-- Log all database queries performed by users
-- Track data modifications and who made them
-- Store operation history with timestamps and user context
-- Searchable audit trail for compliance
+**Audit & Operation Logs:**
+- Every query a user runs is logged
+- Every modification is logged with actor and timestamp
+- The audit log is searchable from the UI
+- Stored in a separate database from the production read-target
 
-**Database:**
-- PostgreSQL as primary data store
-- Read-only access to production database for queries
-- Separate logging database for audit trail
+**Databases:**
+- PostgreSQL for the platform's own state
+- Read-only connection to the production database
+- A separate logging database for the audit trail
 
 ### Frontend (React + Material UI)
-Built responsive web interface:
+A web UI shaped around the team's debugging tasks:
 
-**Features:**
-- **Data explorer:** Browse and query database tables
-- **Query builder:** Visual interface for constructing queries
-- **Results visualization:** Tables, charts, and export options
-- **User management:** Admin interface for managing access
-- **Audit logs viewer:** Search and filter operation history
-- **Authentication:** Login flow with JWT token handling
+- Data explorer for browsing and querying database tables
+- Visual query builder
+- Results view with tables, charts, and export
+- Admin screens for user and role management
+- Audit log viewer with filters and search
+- Login flow with JWT handling
 
 **Material UI Components:**
-- Data tables with pagination, sorting, filtering
+- Data tables with pagination, sort, and filter
 - Forms for user management and query building
 - Navigation and layout components
-- Responsive design for desktop and tablet
+- Layouts that hold up on desktop and tablet
 
 ### Deployment
 
-**Containerization:**
-- Dockerfile for backend (NestJS)
-- Dockerfile for frontend (React production build)
-- Multi-stage builds for optimized image sizes
+**Containers:**
+- Multi-stage Dockerfile for the NestJS backend
+- Multi-stage Dockerfile for the React production build
 
 **AWS ECS:**
-- Backend service running on ECS Fargate
-- Frontend served from ECS with load balancer
-- Environment variables for configuration
-- CloudWatch logs for monitoring
+- Backend on ECS Fargate
+- Frontend served from ECS behind a load balancer
+- Configuration via environment variables
+- Logs into CloudWatch
 
 ---
 
 ## Key Challenges & Solutions
 
-### Challenge 1: Replacing Third-Party Tool Feature Parity
+### Challenge 1: Picking What to Build, Given the Internship Window
 
-**Problem:** Existing tool had features the team relied on. Needed to identify essential features and implement them without feature bloat while staying within internship timeframe.
+**Problem:** The vendor tool had years of features built on top of it. Cloning every screen in an internship wouldn't have shipped on time, but skipping the wrong ones would have meant the team kept the subscription anyway.
 
-**Solution:** Conducted user interviews with development team to prioritize features. Built MVP with core functionality (authentication, data querying, audit logs). Focused on most-used features rather than complete replication.
+**Solution:** I sat with the developers who used the vendor tool and worked out which screens they opened every day and which they never touched. The MVP shipped with the high-traffic features (auth, data querying, audit logs) and dropped the long tail.
 
 :::success Result
-Delivered platform with essential features in internship period. Team adopted new tool, eliminating subscription costs
+The team moved over and the subscription was cancelled. The dropped features didn't come back as missing in feedback.
 :::
 
 ---
 
-### Challenge 2: Ensuring Secure Database Access
+### Challenge 2: Safe Production Database Access
 
-**Problem:** Platform provides direct access to production database. Needed to prevent accidental modifications and ensure only authorized developers can access sensitive data.
+**Problem:** The platform exists to give developers access to the production database, which is also the most direct way to corrupt production data. It had to be useful without exposing write paths from a UI screen.
 
-**Solution:** Implemented read-only database connections for data queries. Added role-based permissions with different access levels. Comprehensive audit logging of all queries. Required authentication for every request.
+**Solution:** The connection used by the data-access modules is read-only at the database level, not just at the application level. Roles control what each user can see; the audit log captures every query with the user and timestamp attached; authentication is enforced on every request.
 
 :::success Result
-Zero unauthorized access incidents. Complete audit trail of all database operations for security compliance
+No write path into the production database from the platform. Every read is attributable to a user through the audit log.
 :::
 
 ---
 
-### Challenge 3: Optimizing Query Performance
+### Challenge 3: Query Performance on Big Tables
 
-**Problem:** Some database tables had millions of rows. Full table scans caused slow response times and poor user experience compared to previous tool.
+**Problem:** Some production tables hold millions of rows. The vendor tool felt fast on them, so a naive replacement that did full-table scans would have shipped slower than what it replaced.
 
-**Solution:** Implemented pagination on backend with efficient SQL queries. Added database indexes for frequently queried columns. Frontend uses virtual scrolling for large result sets. Query result caching for repeated requests.
+**Solution:** Pagination and explicit `LIMIT/OFFSET` on every list endpoint, indexes on the columns the most-used queries filter by, and virtual scrolling on the frontend so a large result set doesn't render every row at once. Repeated queries hit a short-TTL cache before they reach the database.
 
 :::success Result
-Query response times improved significantly. Platform outperformed previous third-party solution in data visualization speed
+Data screens stay responsive on tables with millions of rows. Big result sets don't stall the UI.
 :::
