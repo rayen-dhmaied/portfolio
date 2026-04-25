@@ -13,7 +13,7 @@
 /* ─── Left ───────────────────────────────────────────────── */
 
 .heroLeft {
-  padding: 4rem;
+  padding: 3.5rem;
   border-right: 1px solid var(--portfolio-gold-dim);
   display: flex;
   flex-direction: column;
@@ -28,7 +28,7 @@
   border-radius: 30px;
   padding: 6px 16px;
   width: fit-content;
-  margin-bottom: 2rem;
+  margin-bottom: 1.75rem;
 }
 
 .availableDot {
@@ -52,7 +52,7 @@
   font-size: clamp(3.2rem, 4vw, 5rem);
   line-height: 1;
   letter-spacing: 0.05em;
-  margin-bottom: 0.75rem;
+  margin-bottom: 0.5rem;
 }
 
 .heroRole {
@@ -69,7 +69,7 @@
   line-height: 1.85;
   color: var(--portfolio-ink-2);
   max-width: 38ch;
-  margin-bottom: 2rem;
+  margin-bottom: 1.75rem;
 }
 
 /* ─── Right ──────────────────────────────────────────────── */
