@@ -9,26 +9,23 @@ sidebar_position: 2
 :::note[Key Highlights]
 
 - Reduced AWS costs by **45%** through FinOps practices
-- Automated **70%** of operational tasks  
-- Reduced MTTR by **50%** with monitoring solutions
+- Cut **MTTR by 50%** with observability and on-call response
+- Deployment platform serving **20+ customer apps** across **3 AWS regions**
+- Automated **70%** of operational tasks
 
 <details>
 <summary>View all responsibilities</summary>
 
-- Designed and built cloud architecture on AWS, including ALBs and multi-region EKS clusters, by developing Terraform and CloudFormation templates, ensuring infrastructure consistency and reducing cluster provisioning time to 10 minutes.
-- Applied FinOps practices using Kubecost and load testing to analyze cloud spend and optimize resources, reducing AWS costs by 45%.
-- Automated 70% of operational tasks using Python and Bash scripts with cron scheduling, reducing manual effort and operational overhead.
-- Managed and troubleshot production Kubernetes clusters, ensuring reliability, availability, and security.
-- Built a deployment automation platform using GitHub Actions, Helm, and Argo CD, providing a centralized way to manage application deployments and configurations.
-- Implemented CI/CD pipelines with GitHub Actions covering linting, testing, build, and deployment, improving code quality and reducing deployment time to under 5 minutes.
-- Managed and optimized PostgreSQL clusters, improving performance and reducing resources usage by 35%.
-- Automated backup and restore workflows for Kubernetes resources and PVs (EBS, EFS), improving disaster recovery readiness.
-- Created Grafana dashboards for analyzing Loki logs, improving debugging and reducing troubleshooting time.
-- Built monitoring and alerting using Prometheus and Grafana, helping reduce MTTR by 50%.
-- Participated in on-call rotations, handling incidents and contributing to postmortems, documentation, and SOPs.
-- Implemented centralized authentication using Keycloak and managed company workspace, reducing employee on-boarding time by 70%.
-- Developed backend systems for payments, user management, and analytics, including AI-driven features, by building and maintaining REST APIs using Python and Go.
-- Implemented a service mesh using Istio and configured Jaeger distributed tracing to improve service observability and debug latency issues.
+- Designed and built AWS infrastructure with modular Terraform and CloudFormation, including multi-region EKS clusters provisioned in under 10 minutes and IAM administration, and applied FinOps practices to cut AWS costs by 45%.
+- Migrated workloads between different AWS accounts and regions with minimal downtime.
+- Built CI/CD pipelines on GitHub Actions covering lint, tests, build, and deploy in under 5 minutes per run, across backend services and mobile apps, and automated 70% of operational tasks with Python and Bash scripts on cron.
+- Built a deployment platform on GitHub Actions, Helm, and Argo CD with a React dashboard and YAML-driven config, used across 20+ customer apps in 3 AWS regions.
+- Managed and troubleshot production Kubernetes clusters, rotated through on-call, handled production incidents, and contributed to postmortems and SOP documentation; cut MTTR by 50%. 
+- Built the observability stack with Prometheus, Loki, and Grafana, an external prober for SSL and availability checks from outside the cluster, and Istio with Jaeger for distributed tracing.
+- Built Grafana dashboards for Kubernetes cluster and external EC2 instance health, application debugging, and capacity tracking.
+- Tuned PostgreSQL clusters to reduce resource usage by 35%, and automated backup and restore for Kubernetes resources and EBS/EFS persistent volumes.
+- Centralised authentication on Keycloak and managed the company workspace, cutting employee onboarding time by 70%.
+- Built and maintained REST APIs in Python and Go for payments, user management, and analytics across multiple products, including a live quiz platform with AI question generation (OpenAI), Stripe subscriptions, and LTI 1.3 integration, serving 200+ MAU.
 
 </details>
 
@@ -47,9 +44,9 @@ sidebar_position: 2
 <details>
 <summary>View all responsibilities</summary>
 
-- Developed a custom internal platform using NestJS, React, and Prisma to replace an expensive third-party system, allowing developers to easily manage 100+ database tables.
-- Implemented operations logging and role-based access control to ensure data integrity and security across the platform.
-- Deployed the platform using Docker and AWS ECS with CloudWatch monitoring, enabling reliable, observable, and faster environment provisioning.
+- Developed a custom internal platform using NestJS, React, and Prisma to replace an expensive third-party system, exposing 100+ database tables to the development team.
+- Implemented operations logging and role-based access control across the platform.
+- Deployed the platform on Docker and AWS ECS with CloudWatch monitoring.
 
 </details>
 
