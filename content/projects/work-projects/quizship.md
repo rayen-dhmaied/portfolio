@@ -24,7 +24,7 @@ The Rust WebSocket server already ran a working multiplayer game, but had no not
 - LTI 1.3 deep linking so a quiz launches from inside an LMS course page
 - Admin dashboard for analytics, moderation, and gift subscriptions
 - Billing lifecycle emails dispatched through Celery
-- 2,000+ registered users
+- 1,200+ registered users
 - p95 API latency under 100ms on core endpoints
 :::
 
