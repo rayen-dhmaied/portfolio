@@ -1,10 +1,8 @@
 ---
 title: QuizShip - Live Interactive Quiz Platform
-tags: [Python, Flask, Rust, WebSocket, Stripe, OpenAI, LTI, Kubernetes, ArgoCD, Istio, Grafana, PostgreSQL, Celery]
-description: Real-time quiz platform with WebSocket gameplay, Stripe subscriptions, AI quiz generation via OpenAI, and LTI integration for learning management systems.
+tags: [Python, Flask, Rust, WebSocket, Stripe, OpenAI, LTI, Kubernetes, ArgoCD, Prometheus, Grafana, PostgreSQL, Celery]
+description: Real-time quiz platform with WebSocket gameplay, Stripe subscriptions, AI question generation via OpenAI, and LTI integration for learning management systems.
 ---
-
-# QuizShip - Live Interactive Quiz Platform
 
 **Live App:** [quizship.craftschoolship.com](https://quizship.craftschoolship.com)  
 **API Docs:** [api.quizship.craftschoolship.com/store/docs](https://api.quizship.craftschoolship.com/store/docs)
@@ -12,24 +10,22 @@ description: Real-time quiz platform with WebSocket gameplay, Stripe subscriptio
 ## Overview
 
 ### What it is
-Real-time quiz platform with live multiplayer sessions. Players join via WebSocket to compete in quizzes created by hosts. Python service handles business logic, Rust service manages real-time game sessions.
+A live multiplayer quiz platform. Hosts create quizzes; players join over WebSocket and compete in real time. A Python service holds the business logic (accounts, billing, content), and a Rust service runs the game sessions.
 
 ### Why it exists
-An existing Rust WebSocket server ran a live multiplayer quiz game with no user management, subscriptions, or monetization. To turn it into a commercial product, a Python microservice was built alongside it to handle user accounts, payments, quiz storage, AI generation, and LMS integration, without touching the performance-critical game server.
+The Rust WebSocket server already ran a working multiplayer game, but had no notion of user accounts, plans, or payment. Rather than rewrite a working game loop, I built a Python service alongside it to cover the commercial side (auth, Stripe, content storage, AI question generation, LMS integration) and left the game server alone except for a few thin call-outs to the Python API.
 
 ### Outcome
 
 :::tip Key Results
-- **Hybrid architecture** - Python for business logic, Rust for WebSocket game sessions
-- **Stripe subscriptions** - Payment processing with automated quota enforcement across 3 plan tiers
-- **AI quiz generation** - OpenAI integration for automated content creation
-- **LTI integration** - Deep linking with learning management systems
-- **Admin dashboard** - Analytics, user management, and subscription tooling for operators
-- **Transactional emails** - Billing lifecycle emails dispatched asynchronously via Celery
-- **Production monitoring** - Istio metrics with Grafana dashboards and alerts
-- **2,000+ registered users** with peak concurrent sessions handled without latency regression
-- **99.9% uptime** sustained in production under normal load
-- **sub-100ms p95 API response time** on core endpoints under load
+- Python and Rust split: Python owns business logic, Rust keeps the realtime game loop
+- Stripe subscriptions across three plan tiers, with quotas enforced server-side
+- Quiz generation from a text prompt via OpenAI
+- LTI 1.3 deep linking so a quiz launches from inside an LMS course page
+- Admin dashboard for analytics, moderation, and gift subscriptions
+- Billing lifecycle emails dispatched through Celery
+- 2,000+ registered users
+- p95 API latency under 100ms on core endpoints
 :::
 
 ---
@@ -38,10 +34,8 @@ An existing Rust WebSocket server ran a live multiplayer quiz game with no user 
 
 ```mermaid
 graph TD
-    A[Users / LMS] --> B[Istio Ingress]
-
-    B --> C[Python Service]
-    B --> D[Rust Service]
+    A[Users / LMS] --> C[Python Service]
+    A --> D[Rust Service]
 
     C --> E[(PostgreSQL)]
     C --> R[(Redis)]
@@ -55,19 +49,15 @@ graph TD
     R --> CW[Celery Workers]
     CW --> E
 
-    IS[Istio] --> P[Prometheus]
-    P --> M[Grafana]
-
     style C fill:#4CAF50,color:#fff
     style D fill:#FF9800,color:#fff
     style R fill:#DC382D,color:#fff
     style E fill:#336791,color:#fff
-    style IS fill:#2196F3,color:#fff
     style CB fill:#FF7043,color:#fff
 ```
 
 :::info Architecture Overview
-**Python Service** (Flask) handles auth, subscriptions, quiz library, AI generation, LTI, and admin operations. **Rust Service** manages real-time WebSocket game sessions, using Redis for game state and calling Python for user validation and quota checks. **Redis** is shared between all services and Celery (cache, task queue, and game state). **Celery Workers** access PostgreSQL directly for async tasks. **Celery Beat** schedules recurring tasks. **Stripe** reconciliation happens on webhook events only. **Istio** provides observability through Prometheus and Grafana.
+The Python service (Flask) handles auth, subscriptions, the quiz library, AI generation, LTI, and admin operations. The Rust service runs WebSocket game sessions, keeps live game state in Redis, and calls back to Python for JWT validation and quota checks. Redis is shared as cache, task queue, and game-state store. Celery workers read PostgreSQL for async jobs. Stripe reconciliation happens on webhook events.
 :::
 
 ---
@@ -78,7 +68,7 @@ graph TD
 **Database:** PostgreSQL, Redis  
 **Task Queue:** Celery  
 **Integrations:** Stripe, OpenAI, LTI 1.3  
-**Infrastructure:** Kubernetes, Helm, ArgoCD, Istio  
+**Infrastructure:** Kubernetes, Helm, ArgoCD  
 **Monitoring:** Prometheus, Grafana  
 **CI/CD:** Docker, automated image builds
 
@@ -87,96 +77,96 @@ graph TD
 ## Implementation Setup
 
 ### Python Service (Flask)
-- **Authentication:** JWT-based auth with token versioning for instant revocation
-- **User management:** Registration, profiles, and account status. Subscription plan determines available features and quotas
-- **Subscriptions:** Stripe integration for plan management and webhook-driven reconciliation
-- **Quiz library:** CRUD for quiz storage; quizzes can be linked to LTI resources
-- **AI quiz generation:** OpenAI integration to generate questions from a text prompt
-- **LTI integration:** LTI 1.3 provider for deep linking from LMS platforms
-- **Rate limiting:** Per-endpoint throttling
-- **Admin module:** Operator API for analytics, user moderation, and subscription management
-- **Email:** Billing lifecycle emails offloaded to Celery workers
+- JWT auth with token versioning, so a revocation cuts every active session
+- User management: registration, profiles, account status. The plan on the user's subscription decides which features and quotas they get
+- Stripe-driven subscription handling with webhook reconciliation
+- Quiz library CRUD; quizzes can attach to LTI resources
+- AI quiz generation: text prompt in, structured questions out, via OpenAI
+- LTI 1.3 provider for deep linking from LMS platforms
+- Per-endpoint rate limiting
+- Admin module for operator-side analytics, moderation, and subscription tooling
+- Billing lifecycle emails handed off to Celery
 
 ### Rust WebSocket Service
-An existing real-time game server extended to integrate with the Python service:
-- **WebSocket connections:** Concurrent quiz sessions with Redis-backed game state
-- **User validation:** Calls Python to verify JWTs before allowing session creation
-- **Quota checks:** Calls Python to atomically check and increment quota before quiz creation
-- **Session reporting:** POSTs completed session data to Python for storage
+The existing realtime game server, extended with hooks back into the Python API:
+- WebSocket connections with Redis-backed game state
+- Calls Python to verify the player's JWT before opening a session
+- Calls Python to check and increment quota atomically before a quiz starts
+- POSTs completed session data back to Python for storage
 
 ### Stripe Integration
-- **Subscription tiers:** Plan level determines quiz quotas and feature access
-- **Webhook handlers:** Every Stripe event triggers immediate local reconciliation with no scheduled sync
-- **Gift subscriptions:** Admin can assign free billing periods via Stripe without generating invoices
+- Three plan tiers, with quotas and features keyed off the active plan
+- Webhook handlers reconcile subscription state on every event; no scheduled poller
+- Gift subscriptions: an admin can grant free billing periods without generating an invoice
 
 ### LTI Integration
-- **Deep linking:** Launch quizzes directly from LMS course pages
-- **OIDC flow:** LTI 1.3 authentication and authorization
-- **Resource linking:** Associate quiz payloads with LMS assignments
+- LTI 1.3 OIDC handshake
+- Deep linking so a quiz launches from inside the LMS course page
+- Resource links bind quiz payloads to LMS assignments
 
 ### Celery Tasks
-- **Quota resets:** Daily Beat task checks all active subscriptions and resets quiz counters for any whose billing period has rolled over
-- **Analytics snapshots:** Hourly Beat task aggregates platform metrics for the current day and upserts a single snapshot row covering users, quiz library, quiz launches, AI generation calls, subscriptions, and LTI activity. Each run overwrites the same row with no duplicates
-- **Email delivery:** Ad hoc tasks for billing lifecycle emails triggered by Stripe webhook events
-- **Cleanup:** Expired sessions and stale data removal
+- Daily Beat task resets quiz counters for any subscription whose billing period rolled over
+- Hourly Beat task aggregates platform metrics into a single `analytics_snapshots` row per day, covering users, quiz library, quiz launches, AI generation calls, subscriptions, and LTI activity. Each run upserts the same row, so the table never duplicates
+- Stripe-webhook-triggered tasks send billing lifecycle emails (trial ending, payment failed, subscription cancelled, etc.)
+- Cleanup task removes expired sessions and stale data
 
 ### Admin Module
-- **Analytics:** Live KPI cards (DAU/WAU/MAU, signups, conversion rate, subscription breakdown) from Redis-cached single-pass queries. Time-series from hourly snapshot rows with dedicated endpoints for churn, top users, LTI adoption, and AI usage
-- **User management:** Paginated list with search and status filters; per-user detail view with quiz library stats, launch history, and AI generation logs
-- **Moderation:** Ban/unban, soft delete, and hard delete with full cascade
-- **User impersonation:** Short-lived session scoped to any user for support debugging
-- **Gift subscriptions:** Assign any plan for a configurable number of billing periods at no charge
+- Live KPI cards (DAU/WAU/MAU, signups, conversion, plan breakdown) from single-pass aggregate queries cached in Redis with a short TTL
+- Time-series read from the snapshot table, with endpoints for churn, top users, LTI adoption, and AI usage
+- Paginated user list with search and status filters; user-detail view with library stats, launch history, and AI logs
+- Moderation: ban/unban, soft delete, hard delete (cascading)
+- Short-lived impersonation sessions for support debugging
+- Gift-subscription assignment for any plan and any number of billing periods
 
 ### Deployment and Monitoring
-
-Deployed on Kubernetes via Helm, with ArgoCD handling GitOps sync on repository changes and Docker images built and pushed through an automated CI/CD pipeline. Istio sidecar proxies feed service metrics into Prometheus, surfaced through Grafana dashboards covering API latency, throughput, error rates, and service uptime. Alerts are configured for availability drops, latency spikes, and elevated error rates.
+The platform deploys to Kubernetes via Helm. ArgoCD syncs on repo changes, and a CI pipeline builds and pushes Docker images. Metrics are collected with Prometheus and rendered in Grafana dashboards covering API latency, throughput, error rates, and uptime. Alerts fire on availability drops, latency spikes, and error-rate spikes.
 
 ---
 
 ## Key Challenges & Solutions
 
-### Challenge 1: Extending an Existing Rust Service
+### Challenge 1: Extending a Rust Service I Hadn't Written
 
-**Problem:** The game server was already in production. Needed to integrate it with the new Python service without breaking live sessions, despite no prior Rust experience.
+**Problem:** The game server was already in production. I needed to wire it into the new Python service without breaking live sessions, and I hadn't written Rust before.
 
-**Solution:** Learned the subset of Rust needed (HTTP client, JSON serialization, async error handling) and extended the service incrementally, validating each integration point before deploying.
+**Solution:** I learned the subset I actually needed (HTTP client, JSON, async error handling) and added the integration points one at a time, validating each in staging before deploying. The existing game-loop code stayed untouched.
 
 :::success Result
-Zero downtime during integration. No performance regression measured after rollout.
+No broken sessions during the integration window, and game-loop performance was the same before and after.
 :::
 
 ---
 
-### Challenge 2: Preventing Quota Overruns Under Concurrent Load
+### Challenge 2: Quota Overruns Under Concurrent Load
 
-**Problem:** Users have monthly quiz creation limits. With sessions initiated from Rust and quotas stored in Python's database, concurrent requests could push users over their limit before any single check had time to increment the counter.
+**Problem:** Users have monthly quiz quotas. With sessions starting from Rust and quotas stored in Python's database, two concurrent requests could each pass the check before either incremented the counter, letting both through.
 
-**Solution:** Quota checks are atomic. Rust calls a single Python endpoint that checks and increments in one locked database transaction. No quota is counted unless the session is confirmed.
+**Solution:** I moved the check and the increment into a single Python endpoint backed by a `SELECT ... FOR UPDATE` transaction, so the row is locked from check to write. If the session never confirms, the increment is rolled back.
 
 :::success Result
-No over-quota sessions recorded in production. Quota accuracy held under concurrent load testing.
+No over-quota sessions in production. The same logic held under concurrent load tests.
 :::
 
 ---
 
 ### Challenge 3: Keeping Subscription State in Sync with Stripe
 
-**Problem:** Webhook delivery is not guaranteed. Missed events leave the local database out of sync, causing users to be incorrectly blocked or allowed past their quota.
+**Problem:** Stripe webhook delivery isn't guaranteed. A missed event leaves the local database out of sync, and the user either gets blocked when they shouldn't or sails past their quota.
 
-**Solution:** Every Stripe webhook event triggers immediate reconciliation of the affected subscription, correcting plan and quota state on the spot.
+**Solution:** Every webhook event triggers a reconciliation pass for the affected subscription on the spot, correcting plan and quota state in the database. A missed earlier event gets covered by the next event for that customer.
 
 :::success Result
-No quota enforcement errors attributable to sync drift since rollout.
+No quota errors traced back to sync drift since rollout.
 :::
 
 ---
 
 ### Challenge 4: Admin Analytics Without Full-Table Scans
 
-**Problem:** The admin dashboard needed live KPI cards and historical time-series across users, quizzes, subscriptions, and LTI. Aggregating this on every request would be slow at scale.
+**Problem:** The admin dashboard wanted live KPI cards plus historical time-series across users, quizzes, subscriptions, and LTI. Aggregating that on every request meant a full-table scan per card, which would only get worse as the tables grew.
 
-**Solution:** Two layers: live KPIs run single-pass aggregated queries cached in Redis with a short TTL; time-series reads from a pre-aggregated `analytics_snapshots` table written hourly by Celery, upserted so each day has exactly one row.
+**Solution:** Two layers. Live KPIs run single-pass aggregate queries and cache the result in Redis with a short TTL, so a refresh hits Redis, not Postgres. Time-series reads from a pre-aggregated `analytics_snapshots` table that Celery upserts hourly, with one row per day. The dashboard reads either Redis or an indexed snapshot row, never the raw event tables.
 
 :::success Result
-Dashboard load time stays flat regardless of data volume. Time-series queries hit indexed snapshot rows instead of full-table scans.
+Dashboard latency held steady through load tests as the underlying data grew.
 :::
