@@ -1,27 +1,25 @@
 ---
 title: Release Helm Charts - GitHub Action
 tags: [GitHub Actions, Helm, CI/CD, Bash]
-description: Reusable GitHub Action automating Helm chart releases to GitHub Pages with linting, packaging, and index generation in a single workflow step.
+description: A reusable GitHub Action that lints, packages, and publishes Helm charts to GitHub Pages in one workflow step.
 ---
-
-# Release Helm Charts - GitHub Action
 
 [View Source Code on GitHub](https://github.com/rayen-dhmaied/release-helm-charts) →
 
 ## Overview
 
 ### What it is
-Reusable GitHub Action that automates Helm chart releases to GitHub Pages.
+A reusable GitHub Action that publishes Helm charts to GitHub Pages.
 
 ### Why it exists
-Wanted to learn how GitHub Actions composite actions work and understand Helm repository mechanics by building one from scratch. Ended up using it in every project that needs chart distribution.
+I wanted to understand how composite GitHub Actions and Helm repositories work, so I built one. It ships charts on every project of mine that needs a Helm repo.
 
 ### Outcome
 
 :::tip Key Results
-- **Published on GitHub Marketplace** - Available as reusable action
-- **Actually used in production** - Powers chart releases across multiple projects
-- **Clean codebase** - Composite action with bash scripts, no external dependencies
+- Published on the GitHub Marketplace
+- In use across my own projects that publish Helm charts
+- Composite action built from bash, with no external dependencies
 :::
 
 ---
@@ -35,46 +33,46 @@ Wanted to learn how GitHub Actions composite actions work and understand Helm re
 ## Implementation Setup
 
 ### Action Structure
-Composite action using bash scripts for each step:
+Composite action driven by bash scripts:
 - Git operations for branch management and change detection
 - Helm commands for dependency updates, linting, and packaging
-- Index generation and updates using `helm repo index`
+- Index generation through `helm repo index`
 
 ### Workflow
-1. Checkout source branch and GitHub Pages branch separately
-2. Compare branches with git diff to find modified charts
+1. Check out the source branch and the GitHub Pages branch separately
+2. Diff the two branches to find modified charts
 3. Update chart dependencies
 4. Lint and package changed charts
 5. Update or create `index.yaml`
-6. Commit and push to GitHub Pages branch
+6. Commit and push to the GitHub Pages branch
 
 ### Key Implementation Details
-- **Dual checkout strategy:** Source branch in workspace root, Pages branch in subdirectory
-- **Change detection:** Git diff between branches to process only modified charts
-- **Index merging:** Preserves existing chart versions when adding new releases
+- **Dual checkout:** source branch at workspace root, Pages branch in a subdirectory
+- **Change detection:** git diff between the two checkouts, so only modified charts are processed
+- **Index merging:** existing chart versions are preserved when new releases are added
 
 ---
 
 ## Key Challenges & Solutions
 
-### Challenge 1: Managing Two Branches Simultaneously
+### Challenge 1: Managing Two Branches in One Job
 
-**Problem:** Needed to compare changes between source branch and GitHub Pages branch, then update the Pages branch. Standard checkout action overwrites the workspace.
+**Problem:** The action needs to compare the source branch against the GitHub Pages branch and then update the Pages branch. A single `actions/checkout` overwrites the workspace, so a second checkout would clobber the first.
 
-**Solution:** Used `actions/checkout` twice with different `path` parameters. Source branch at workspace root, Pages branch in subdirectory. Git diff compares between them to find modified charts.
+**Solution:** Run `actions/checkout` twice with different `path` parameters. Source branch sits at the workspace root, Pages branch sits in a subdirectory. `git diff` between them turns up the modified charts.
 
 :::success Result
-Can detect changes and update publish branch without branch switching or stashing
+Both branches are available in the same job, with no branch switching or stashing.
 :::
 
 ---
 
 ### Challenge 2: Preserving Chart Version History
 
-**Problem:** Helm repository index needs all previous chart versions listed. Regenerating from scratch would lose old releases.
+**Problem:** A Helm repository's `index.yaml` lists every chart version available. Regenerating it from scratch on each release would drop every previous version.
 
-**Solution:** Copy existing `index.yaml` from Pages branch before generating new index. Use `helm repo index --merge` to combine existing entries with new packages.
+**Solution:** Copy the existing `index.yaml` from the Pages branch before regenerating. `helm repo index --merge` folds new packages in alongside the existing entries.
 
 :::success Result
-Published charts maintain full version history, users can install any previous version
+Older versions stay installable after every release.
 :::
