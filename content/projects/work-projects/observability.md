@@ -1,26 +1,30 @@
 ---
 title: Kubernetes Observability Stack
 tags: [Kubernetes, Prometheus, Grafana, Loki, Jaeger, Kiali, Terraform, AWS, S3, Keycloak, Oncall, Monitoring, Uptime Kuma, Nginx, Istio]
-description: Multi-cluster Kubernetes observability with Prometheus, Loki, Grafana, Jaeger, Kiali, OnCall, plus external SSL probes from a separate AWS Lightsail instance. Cut MTTR in half.
+description: Kubernetes observability stack for metrics, logs, traces, mesh health, alert routing, and external HTTPS probes. Cut MTTA and MTTR by 50%.
 ---
 
 ## Overview
 
 ### What it is
-A monitoring stack that covers in-cluster signals (Prometheus metrics, Loki logs, Jaeger traces, Kiali mesh topology, Grafana dashboards, OnCall alerting) and a separate external prober running Uptime Kuma on AWS Lightsail. The Lightsail box checks each customer's SSL domain over HTTPS the way a browser would, hosts a public status page customers can read during incidents, and runs on its own alert path independent of Grafana.
+A production observability stack for Kubernetes workloads. Prometheus collects metrics, Loki stores logs, Jaeger traces service calls, Kiali shows Istio traffic, and Grafana ties the signals into dashboards and alerts.
+
+I also deployed Uptime Kuma on a separate AWS Lightsail instance. It checks each customer HTTPS domain from outside the EKS account and hosts a public status page customers can use during incidents.
 
 ### Why it exists
-Engineers had no consolidated view of cluster or app health. Searching logs meant SSHing into clusters and running `kubectl logs` per pod. Alerts were ad-hoc, so incidents surfaced when a customer complained rather than when an SLO breached.
+Engineers had to jump between clusters, pods, and shell sessions to answer basic incident questions. Logs lived behind `kubectl logs`, alerts fired from different places, and customer-facing outages often reached us through support tickets first.
+
+I wanted one dashboard, one alert path, and one external check that sees what customers see.
 
 ### Outcome
 
 :::tip Key Results
-- Incident response 50% faster (MTTA and MTTR halved)
-- One Grafana per environment, fed by Prometheus and Loki
-- External SSL probes from outside AWS catch outages that look healthy from inside the cluster
-- Public status page on Uptime Kuma so customers can see live service health themselves
-- Every alert links to its own runbook so responders know how to act on it
-- Oncall rotation with auto-escalation when an alert sits unacknowledged
+- MTTA and MTTR cut by 50%
+- Prometheus and Loki feed one Grafana per environment
+- External HTTPS checks from a separate Lightsail instance
+- Public Uptime Kuma status page for customer-facing incidents
+- Runbook attached to each alert
+- Lightweight on-call rotation with escalation for unacknowledged alerts
 :::
 
 ---
@@ -53,7 +57,9 @@ graph TD
 ```
 
 :::info Alert Flow
-Prometheus and Loki forward alerts to Grafana Alerting, which hands them to Grafana OnCall for routing to SMS, phone, or Mattermost by severity. Each alert points at its own runbook so the responder knows how to act on it. Uptime Kuma runs on its own track: failures alert straight to Mattermost and SMS, with no dependency on Grafana, and the same instance serves a public status page for customers. Heartbeat monitors confirm the in-cluster path is alive.
+Prometheus and Loki send in-cluster alerts into Grafana Alerting. Grafana OnCall routes them by severity to phone, SMS, or Mattermost. Each alert includes a runbook link, so the responder opens the alert and sees the first action to take.
+
+Uptime Kuma runs on its own alert path. It sends failed HTTPS checks to Mattermost and SMS without depending on Grafana, and it serves the public status page from the same Lightsail instance. Heartbeat monitors cover the in-cluster monitoring path.
 :::
 
 ---
@@ -62,9 +68,9 @@ Prometheus and Loki forward alerts to Grafana Alerting, which hands them to Graf
 
 **Monitoring:** Prometheus, Grafana, Loki, Promtail, Metrics Server, Kube State Metrics  
 **Tracing:** Jaeger  
-**Ingress / mesh metrics:** Nginx Ingress Controller, Istio (Envoy stats + istiod), Kiali  
+**Ingress / mesh metrics:** Nginx Ingress Controller, Istio, Kiali  
 **External probes:** Uptime Kuma on AWS Lightsail  
-**Alerting:** Grafana OnCall (SMS, Phone, Mattermost)  
+**Alerting:** Grafana OnCall, SMS, phone calls, Mattermost  
 **Storage:** AWS S3  
 **IaC:** Terraform  
 **SSO:** Keycloak
@@ -73,70 +79,76 @@ Prometheus and Loki forward alerts to Grafana Alerting, which hands them to Graf
 
 ## Implementation Setup
 
-### Infrastructure Provisioning (Terraform)
-Extended the existing cluster Terraform to add:
-- Metrics Server for HPA and `kubectl top`
-- Kube State Metrics for cluster-object signals (pods, deployments, nodes)
-- Prometheus with retention configured against actual ingest rate
-- Grafana for dashboards and alerting
+### Infrastructure Provisioning
+I extended the existing Terraform stack with:
+- Metrics Server for HPA data and `kubectl top`
+- Kube State Metrics for pods, deployments, nodes, and other Kubernetes objects
+- Prometheus with retention sized from ingest volume
+- Grafana for dashboards, alert rules, and OnCall
 - Loki for log aggregation
-- Promtail as a DaemonSet shipping logs from each node
-- IAM roles for S3 access via IRSA
-- S3 buckets with lifecycle rules for log retention
-- A Lightsail instance, security group, and DNS record for the external prober
+- Promtail as a DaemonSet on each node
+- IAM roles for S3 access through IRSA
+- S3 buckets with lifecycle rules for Loki retention
+- Lightsail instance, firewall rules, and DNS for Uptime Kuma
 
 ### Loki Configuration
-- S3 backend for chunks and indexes (chunk size and compression tuned for our log volume)
-- Retention aligned with the team's compliance window
-- Index period balanced for query latency on the last 7 days against storage cost on the long tail
+- S3 backend for chunks and indexes
+- Chunk size and compression tuned against real log volume
+- Retention aligned with the compliance window
+- Index period chosen to keep recent queries fast while controlling long-tail storage cost
 
 ### Grafana Dashboards
-- Application logs filterable by namespace, pod, and container
-- Cluster components: control plane, nodes, etcd, API server
-- Resource usage: CPU, memory, disk, network per cluster
-- Application metrics: request rates, latencies, error rates per service
-- Ingress traffic: per-host RPS, p95 latency, and 4xx/5xx ratios from the Nginx Ingress Controller
-- Service mesh: request volume between workloads
+- Application logs by namespace, pod, and container
+- Cluster health for nodes, etcd, API server, and control-plane components
+- Resource usage by cluster: CPU, memory, disk, and network
+- Application metrics: request rate, latency, and error rate per service
+- Ingress traffic: per-host RPS, p95 latency, and 4xx/5xx ratios
+- Service mesh traffic between workloads
 
 ### Nginx Ingress Controller Metrics
-The Nginx Ingress Controller exposes Prometheus metrics on `/metrics`. A `ServiceMonitor` scrapes it. Dashboards key off `ingress`, `host`, and `status` labels, so we see traffic per customer domain rather than aggregate noise. Alerts trigger on sustained 5xx ratio per ingress and on p95 latency above per-app thresholds.
+The Nginx Ingress Controller exposes Prometheus metrics on `/metrics`, and a `ServiceMonitor` scrapes it. I built dashboards around the `ingress`, `host`, and `status` labels, so engineers can inspect one customer domain without digging through aggregate traffic. Alerts fire on sustained 5xx ratios and p95 latency above the threshold for each app.
 
 ### Istio Metrics
-Prometheus scrapes Istio's Envoy sidecars and istiod for service-mesh telemetry. Dashboards show request rates, success ratios, and latency between workloads.
+Prometheus scrapes Envoy sidecars and istiod. Grafana dashboards show request rates, success ratios, and latency between workloads. Kiali adds the service graph on top of the same mesh signals.
 
-### Distributed Tracing (Jaeger)
-Envoy sidecars emit spans on every inter-service call. Jaeger collects them and serves a UI keyed on trace ID, service, or operation. Open a trace to see which hop is slow.
+### Distributed Tracing
+Envoy sidecars emit spans for inter-service calls. Jaeger collects the spans and lets engineers search by trace ID, service, or operation. During an incident, a responder can open one trace and see which hop burned the latency budget.
 
-### Service Mesh Topology (Kiali)
-Kiali reads Istio config and Prometheus metrics to render a live workload-to-workload graph. It validates VirtualService and DestinationRule definitions against the running mesh, flags misrouted traffic, and links each edge to its Jaeger trace view. SSO via Keycloak, same as Grafana.
+### Service Mesh Topology
+Kiali reads Istio config and Prometheus metrics to render the workload graph. It validates `VirtualService` and `DestinationRule` objects against the running mesh, flags traffic routing issues, and links graph edges to Jaeger traces. Keycloak protects Kiali with the same SSO flow as Grafana.
 
-### External Uptime Probes (Uptime Kuma on Lightsail)
-Uptime Kuma runs on a small Lightsail instance outside the EKS account. It hits each customer's SSL domain over HTTPS on a fixed interval and validates the status code, a known body string, and certificate expiry. The Lightsail location is the point: if EKS, the cluster's networking, or the AWS region itself goes down, the prober keeps running.
+### External Uptime Probes
+Uptime Kuma runs on a dedicated Lightsail instance outside the EKS account and cluster network. It checks each customer HTTPS domain on a fixed interval, validates the status code, matches a known response string, and watches certificate expiry.
 
-The instance is its own thing, deliberately separate from the Grafana stack. It has its own dashboard for the team and serves a public status page that customers can check during incidents. When a probe fails, Uptime Kuma alerts straight to Mattermost and SMS, on a path that doesn't touch Grafana, so a region-level outage that takes the in-cluster alerting down doesn't take the page out down with it. Certificate-expiry warnings fire 14 days out.
+The separate network path catches edge failures that in-cluster metrics can miss. If DNS breaks, a load balancer routes traffic to the wrong target, or a TLS certificate expires, Uptime Kuma catches the customer-facing failure and alerts through Mattermost and SMS. Certificate-expiry warnings fire 14 days before expiry.
+
+The same instance hosts a public status page, so customers can check service health during an incident without waiting for someone on the team to reply.
 
 ### Alerting Configuration
-- Severity tiers route to different channels: critical pages phone + SMS, warning posts to Mattermost, info goes to a quieter feed
-- Alert rules live in Prometheus and Loki for in-cluster signals; Uptime Kuma owns its own rules for external probes
-- Every alert has a runbook attached so responders know how to act.
-- Silence windows for planned maintenance
+- Critical alerts page phone and SMS
+- Warning alerts post to Mattermost
+- Info alerts collect in a low-noise feed
+- Prometheus and Loki own in-cluster alert rules
+- Uptime Kuma owns external HTTPS alert rules
+- Each alert links to a runbook
+- Planned maintenance uses silence windows
 
-### Keycloak SSO Integration
-- Grafana OAuth2 backed by Keycloak
-- Keycloak group mappings sync to Grafana org roles
+### Keycloak SSO
+- Keycloak backs Grafana OAuth2
+- Keycloak groups mapped to Grafana org roles
 - One login covers Grafana and Grafana OnCall
 
-### Grafana OnCall Setup
-- Weekly rotation with primary and backup
-- Auto-escalation when an alert sits unacknowledged past the SLA
-- Heartbeat monitors covering Prometheus, Loki, and Promtail
-- Integrations wired to Prometheus, Loki, and Mattermost
+### Grafana OnCall
+- Primary and backup rotation for on-call coverage
+- Escalation when an alert passes its acknowledgement SLA
+- Heartbeats for Prometheus, Loki, and Promtail
+- Integrations for Prometheus, Loki, and Mattermost
 
 ### Documentation
-- Per-alert runbooks so responders know the resolution steps for whatever fired
-- Oncall handbook covering shift handover, escalation, and common pitfalls
-- Dashboard guides for the most-used troubleshooting flows
-- Architecture overview of the monitoring stack itself
+- Per-alert runbooks with commands, dashboards, owners, and rollback notes
+- On-call notes for handover and escalation
+- Dashboard guides for common troubleshooting paths
+- Architecture overview for the monitoring stack
 
 ---
 
@@ -144,46 +156,46 @@ The instance is its own thing, deliberately separate from the Grafana stack. It 
 
 ### Challenge 1: Log Storage Cost at Cluster Scale
 
-**Problem:** Kubernetes clusters generate log volume that outgrew any reasonable local-disk plan. Loki's default storage was unsustainable within the first month.
+**Problem:** Kubernetes logs outgrew local disk within the first month. Keeping Loki storage on cluster volumes would have raised cost and made retention harder to enforce.
 
-**Solution:** I switched Loki's backend to S3 for both chunks and indexes. Lifecycle rules on the bucket transition older objects to cheaper storage classes and delete them after the retention window. Index period and chunk size were tuned against actual query patterns rather than defaults.
+**Solution:** I moved Loki chunks and indexes to S3. Bucket lifecycle rules transition older objects to cheaper storage classes and delete them after the retention window. I tuned chunk size and index periods from query patterns instead of keeping Loki defaults.
 
 :::success Result
-Log storage costs dropped 70%. Recent logs stay fast to query; older logs sit in cold storage until retention lapses them.
+Log storage costs dropped 70%. Recent logs stay fast to query, and older logs age out through S3 lifecycle rules.
 :::
 
 ---
 
 ### Challenge 2: Alert Fatigue
 
-**Problem:** The first alert pass fired on every spike. Engineers muted Mattermost and started ignoring genuine incidents.
+**Problem:** The first alert set fired on spikes that did not affect customers. Engineers muted Mattermost, and real incidents had to compete with noise.
 
-**Solution:** I rebuilt thresholds against the previous quarter's incident data. Severity tiers now route differently: critical pages a phone, warning posts to Mattermost, info collects in a low-noise channel. Maintenance windows get pre-scheduled silence rules instead of ad-hoc mutes. Pairing each alert with a runbook cut down on "what does this even mean" pings, since responders now jump straight to the resolution steps.
+**Solution:** I rebuilt thresholds from the previous quarter of incidents. Critical alerts now page by phone and SMS, warnings go to Mattermost, and info alerts collect in a lower-priority feed. Planned work uses silence windows. Each alert includes a runbook, so responders spend less time asking what the alert means.
 
 :::success Result
-Alert volume fell 60%. The pages that do fire correlate with real customer-affecting incidents, and time-to-resolution on those pages improved.
+Alert volume fell 60%. The remaining pages map closer to customer impact, and responders reach the right dashboard faster.
 :::
 
 ---
 
 ### Challenge 3: Detecting Monitoring Failures
 
-**Problem:** A silent monitoring failure looks identical to a healthy system. If Prometheus stopped scraping or Promtail wedged, no one would notice until an actual outage went undetected.
+**Problem:** A broken monitoring pipeline can look like a quiet system. If Prometheus stops scraping or Promtail stops shipping logs, engineers may miss the next outage.
 
-**Solution:** Heartbeat monitors in Grafana OnCall. Each component (Prometheus, Loki, Promtail's log delivery) sends a periodic heartbeat. A missed heartbeat fires its own alert. A meta-dashboard shows live state for every monitoring component.
+**Solution:** I added Grafana OnCall heartbeats for Prometheus, Loki, and Promtail log delivery. A missed heartbeat opens its own alert. A meta-dashboard shows the health of the monitoring components themselves.
 
 :::success Result
-Monitoring outages now page the team rather than going unnoticed.
+Monitoring failures now page the on-call rotation like product incidents.
 :::
 
 ---
 
-### Challenge 4: Outages from the User's Perspective
+### Challenge 4: Seeing What Customers See
 
-**Problem:** In-cluster monitoring only sees what the cluster sees. If a load balancer is misrouting traffic, a DNS record is wrong, or a TLS certificate has expired at the edge, Prometheus reports green while customers can't reach the app.
+**Problem:** In-cluster monitoring only sees the cluster side. DNS mistakes, load balancer routing issues, and expired edge certificates can break the app for customers while Prometheus still reports green services.
 
-**Solution:** I deployed Uptime Kuma on a Lightsail instance outside the EKS account and its networking. It hits each customer's SSL domain over HTTPS the way a browser would, on a fixed schedule, and validates the response code, a known body string, and certificate validity. Failures alert straight to Mattermost and SMS on a path that doesn't touch Grafana, so a region-level outage that takes the in-cluster stack down still gets a page out. The same instance hosts a public status page customers can check on their own.
+**Solution:** I deployed Uptime Kuma on Lightsail, outside the EKS account and cluster networking. It probes each customer HTTPS domain, checks the response, and alerts through a separate Mattermost and SMS path. The public status page runs from the same instance.
 
 :::success Result
-Edge failures (load balancer, DNS, TLS) now page the team within a probe interval instead of after a customer reports them. Customers also see service health on the public status page without needing to ask support.
+Edge failures now page the on-call rotation within a probe interval. Customers can check the public status page instead of waiting for us to confirm an incident.
 :::

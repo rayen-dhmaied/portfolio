@@ -1,31 +1,36 @@
 ---
 title: Scalable BigBlueButton on AWS
 tags: [AWS, EC2, EKS, CloudFormation, Helm, Auto Scaling, Prometheus, Grafana, Loki]
-description: Multi-AZ BigBlueButton deployment on AWS with auto-scaling EC2 backends, Scalelite load balancing, and EFS shared storage so recordings live in one place.
+description: Multi-AZ BigBlueButton platform on AWS with auto-scaling EC2 backends, Scalelite routing, shared EFS recordings, and fleet monitoring.
 ---
 
 ## Overview
 
 ### What it is
-A multi-AZ BigBlueButton deployment on AWS. EC2 instances run BBB itself; Scalelite sits in front as a load balancer and API proxy; EFS holds recordings so any backend can write them and any client can fetch them through Scalelite.
+A multi-AZ BigBlueButton platform on AWS. EC2 instances run BigBlueButton, Scalelite routes meetings to the backend pool, and EFS stores recordings so any backend can write them and Scalelite can serve them from one endpoint.
+
+I also deployed the supporting control plane around it: CloudFormation for infrastructure, Helm charts for Scalelite and Greenlight, systemd bootstrap scripts for instance lifecycle work, and Prometheus/Grafana/Loki for fleet visibility.
 
 ### Why it exists
-BBB is stateful: a meeting lives on a single instance, and recordings get written to that instance's local disk. A single-server setup caps capacity, and if the box dies the recordings go with it. Scalelite plus shared storage lets the fleet grow and shrink without users seeing which backend they landed on.
+BigBlueButton keeps each live meeting on one server and writes recordings to that server's disk. A single-node setup limits capacity, and a failed node can take recordings with it.
+
+The platform needed more capacity without breaking live meetings during scale-in, losing recordings, or asking engineers to register each new server by hand.
 
 ### Outcome
 
 :::tip Key Results
-- Instance launch time down from 11 minutes to 3 via a custom AMI and a stripped bootstrap
-- No meeting disruptions during auto-scaling: instances with active meetings stay protected from termination
-- Recordings centralised on EFS, served through Scalelite from a single endpoint
-- Prometheus, Grafana, and Loki covering metrics and logs across the fleet
+- Instance launch time dropped from 11 minutes to 3 with a custom AMI
+- Auto Scaling protects instances that host active meetings
+- EFS keeps recordings available through Scalelite from one endpoint
+- Route53 records and Scalelite registration happen during instance lifecycle hooks
+- Prometheus, Grafana, Loki, and Promtail cover metrics and logs across the fleet
 :::
 
 ---
 
 ## Architecture
 
-### High-level Flow
+### High-Level Flow
 
 ```mermaid
 graph TD
@@ -41,74 +46,80 @@ graph TD
 ```
 
 :::info Key Components
-Greenlight or an LMS forwards into Scalelite, which proxies each meeting to one BBB instance in the Auto Scaling Group. Every BBB instance and Scalelite itself mount the same EFS volume, so a recording written by one backend is visible to all of them.
+Greenlight or an LMS sends users into Scalelite. Scalelite picks one BigBlueButton instance from the Auto Scaling Group and proxies the meeting there. Each BigBlueButton instance and the Scalelite pods mount the same EFS volume, so recordings stay reachable even when the backend pool changes.
 :::
 
 ---
 
 ## Tech Stack
 
-**Cloud & Infrastructure:** AWS (EC2, Auto Scaling Groups, EKS, EFS, Route53, CloudWatch)  
+**Cloud & Infrastructure:** AWS, EC2, Auto Scaling Groups, EKS, EFS, Route53, CloudWatch  
 **IaC:** CloudFormation  
-**Automation:** Bash scripts, systemd services  
-**Containers & Orchestration:** Kubernetes (EKS), Helm, Docker  
-**Monitoring & Logging:** Prometheus (EC2 service discovery), Grafana, Loki, Promtail
+**Automation:** Bash, systemd services, AWS CLI  
+**Containers & Orchestration:** Kubernetes, EKS, Helm, Docker  
+**Monitoring & Logging:** Prometheus, EC2 service discovery, Grafana, Loki, Promtail
 
 ---
 
 ## Implementation Setup
 
 ### Infrastructure Provisioning
-- Multi-AZ VPC with public subnets across availability zones
-- Auto Scaling Group with capacity managed in CloudFormation
+- Multi-AZ VPC with public subnets
+- Auto Scaling Group managed through CloudFormation
 - EFS file system with backups for shared recordings
-- Route53 hosted zone for DNS
+- Route53 hosted zone and per-instance DNS records
+- CloudWatch alarms for scale-out and scale-in
+- EKS cluster for Scalelite, Greenlight, and supporting services
 
 ### Custom AMI
-I built a custom Ubuntu 22.04 AMI with BigBlueButton v3 and its dependencies pre-installed. Bootstrap drops from a full install to instance-specific configuration only.
+I built a custom Ubuntu 22.04 AMI with BigBlueButton v3 and its dependencies installed. Instance bootstrap now handles only machine-specific work: hostname, DNS, certificates, Scalelite registration, EFS mount, and monitoring agents.
 
-### Automation Scripts
-Bash scripts wired up as systemd services run on instance launch and shutdown:
-- Route53 A records created on launch, deleted on shutdown
-- Per-instance config for BigBlueButton, FreeSWITCH, and the TURN server
-- Scalelite registration and de-registration via the Scalelite API
-- EFS mount and configuration
-- Promtail and metric exporters (bbb-exporter, node-exporter) installed at boot
+### Instance Lifecycle Automation
+Systemd services run Bash scripts on launch and shutdown:
+- Create and delete Route53 A records
+- Configure BigBlueButton, FreeSWITCH, and TURN for the instance
+- Register and deregister the server through the Scalelite API
+- Mount EFS for recordings
+- Install and start Promtail, bbb-exporter, and node-exporter
+- Toggle scale-in protection when the instance hosts an active meeting
 
 ### Helm Charts
-- Scalelite chart: deployment with database config and EFS mount
-- Greenlight chart: user-facing UI with auth wired in
+- Scalelite chart with database config and EFS mount
+- Greenlight chart for the user-facing UI and auth settings
+- Internal service exposure between EKS and the EC2 backend fleet
 
 ### Management Tooling
-I built a small CLI for the full stack lifecycle (create, update, delete). It validates the CloudFormation templates, runs the deployments, and keeps the S3 bucket that holds templates and bootstrap scripts in sync.
+I built a CLI for stack lifecycle tasks: create, update, delete, validate, and sync. It validates CloudFormation templates, runs deployments, and keeps the S3 bucket for templates and bootstrap scripts in sync.
 
-### Deployment Strategy
+### Auto Scaling Strategy
+- Scale out when the lowest CPU value across the fleet crosses 80%
+- Scale in when the lowest CPU value falls below 6%
+- Protect any instance with an active meeting from termination
+- Use CloudWatch alarms to drive threshold policies
+- Add scheduled capacity before planned webinars, exams, and large events
 
-**Auto Scaling Configuration:**
-- Scale-out: lowest CPU across the fleet crosses 80%
-- Scale-in: lowest CPU across the fleet falls below 6%
-- Instance protection: a box with an active meeting can't be terminated
-- CloudWatch alarms drive the threshold-based policies above
-- Scheduled scaling actions add capacity ahead of pre-planned events (large webinars, exam slots) so the fleet is warm before traffic arrives
-
-:::note Zero-Downtime Updates
-CloudFormation rolling updates bring up new instances with the new config. Old instances stay in service until the new ones pass health checks.
+:::note Update Strategy
+CloudFormation rolling updates launch new instances with the new config. Old instances stay in service until the new ones pass health checks.
 :::
 
-### Monitoring & Logging Setup
+### Monitoring and Logging
 
 **Metrics:**
-- Prometheus with EC2 service discovery, so new instances appear without config changes
-- bbb-exporter for BBB-specific signals (meetings, participants, recordings)
-- node-exporter for CPU, memory, disk, and network
+- Prometheus uses EC2 service discovery, so new instances appear without manual target edits
+- bbb-exporter reports BigBlueButton meetings, participants, recordings, and server state
+- node-exporter reports CPU, memory, disk, and network
 
 **Logs:**
-- Loki sits behind an internal load balancer, reachable from EC2 but not from the internet
-- Promtail on every instance ships logs to Loki
-- Logs are searchable across the fleet from one place
+- Loki runs behind an internal load balancer, reachable from EC2 but closed to the public internet
+- Promtail on each instance ships system and BigBlueButton logs to Loki
+- Grafana lets engineers search logs across the fleet from one place
 
-**Visualisation:**
-- A Grafana dashboard combines metrics and logs for fleet health and live meeting capacity
+**Dashboards:**
+- Fleet health
+- Live meeting capacity
+- Active meetings and participants
+- Recording processing
+- Node saturation
 
 ---
 
@@ -116,46 +127,46 @@ CloudFormation rolling updates bring up new instances with the new config. Old i
 
 ### Challenge 1: Slow Instance Launch Times
 
-**Problem:** First-cut deployments took 11 minutes per instance because bootstrap installed BigBlueButton, every dependency, the SSL chain, and the configuration from scratch. That's far too slow to react to a real load spike.
+**Problem:** The first version took 11 minutes to launch one instance. Bootstrap installed BigBlueButton, dependencies, certificates, and config from scratch, so Auto Scaling could not react fast enough during traffic spikes.
 
-**Solution:** I built a custom AMI with BigBlueButton and its dependencies baked in. The bootstrap now only does instance-specific work (hostname, DNS, Scalelite registration), so most of the cold-start cost lives in image-build time instead of launch time.
+**Solution:** I moved the heavy install work into a custom AMI. Bootstrap now handles only instance-specific configuration: hostname, DNS, certificates, Scalelite registration, EFS mount, and monitoring agents.
 
 :::success Result
-Launch time dropped from 11 minutes to 3, which is fast enough for scale-out to keep up with load.
+Launch time dropped from 11 minutes to 3, which gave scale-out enough time to catch real load spikes.
 :::
 
 ---
 
 ### Challenge 2: Meeting Disruptions During Scale-In
 
-**Problem:** Scale-in could terminate an EC2 instance that was still hosting a live meeting, dropping every participant on that box.
+**Problem:** Auto Scaling could terminate an EC2 instance that still hosted a live meeting. Everyone in that meeting would lose the session.
 
-**Solution:** Bootstrap scripts query the BBB API for active meetings and toggle the instance's scale-in protection flag. The CloudWatch threshold for scale-in sits at 6% CPU, so only idle boxes become candidates in the first place.
+**Solution:** A systemd timer queries the BigBlueButton API for active meetings and toggles EC2 scale-in protection on the instance. The 6% CPU scale-in threshold keeps idle instances as the first candidates, and scale-in protection blocks termination for boxes still serving users.
 
 :::success Result
-Live meetings stopped being cut off by auto-scaling, and the fleet still shrinks when traffic drops.
+Scale-in stopped dropping live meetings while the fleet still shrank after traffic fell.
 :::
 
 ---
 
-### Challenge 3: Centralised Recording Access
+### Challenge 3: Centralized Recording Access
 
-**Problem:** BBB writes recordings to local disk on whichever instance hosted the meeting. Scalelite presents itself to clients as a single BBB endpoint, so it needs to reach recordings on every backend, not just one.
+**Problem:** BigBlueButton writes recordings to the local disk of the instance that hosted the meeting. Scalelite presents one endpoint to clients, so it needs access to recordings from every backend.
 
-**Solution:** EFS as the shared storage layer, mounted on every BBB instance and on Scalelite's pods in EKS. Backends write recordings into EFS, and Scalelite reads them back through the same mount. EFS backups cover data loss; the EC2 fleet and the EKS cluster sit in the same VPC for network access.
+**Solution:** I used EFS as the shared recording layer. Each BigBlueButton instance mounts the same EFS file system, and Scalelite pods mount it inside EKS. Backends write recordings once; Scalelite reads them from the shared mount. EFS backups cover recording loss, and the EC2 fleet and EKS cluster share VPC access.
 
 :::success Result
-Scalelite serves every recording from one endpoint, regardless of which backend produced it.
+Scalelite serves recordings from one endpoint regardless of which backend created them.
 :::
 
 ---
 
 ### Challenge 4: Dynamic DNS and Server Registration
 
-**Problem:** Each auto-scaled instance needs its own DNS record (so Let's Encrypt can issue a certificate) and has to register with Scalelite to start receiving meetings. None of that can be done by hand on a fleet that grows and shrinks on its own.
+**Problem:** Each new BigBlueButton instance needs a DNS record, a certificate, and Scalelite registration before it can receive meetings. Manual setup would break as soon as the Auto Scaling Group added or removed capacity.
 
-**Solution:** Systemd services trigger bash scripts on launch and shutdown. On launch, they create the Route53 A record via the AWS CLI, run Let's Encrypt for the certificate, and register the new server with Scalelite using a shared secret. On shutdown, they deregister from Scalelite and delete the DNS record.
+**Solution:** Launch and shutdown scripts handle the full lifecycle. On launch, the instance creates its Route53 A record, requests a Let's Encrypt certificate, mounts EFS, and registers with Scalelite through a shared secret. On shutdown, it deregisters from Scalelite and deletes its DNS record.
 
 :::success Result
-A new instance joins the pool with its DNS record, SSL certificate, and Scalelite registration in place by the time the bootstrap finishes.
+New instances join the meeting pool with DNS, TLS, shared storage, and Scalelite registration in place before bootstrap finishes.
 :::
