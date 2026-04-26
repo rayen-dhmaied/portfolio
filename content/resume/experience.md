@@ -8,24 +8,24 @@ sidebar_position: 2
 
 :::note[Key Highlights]
 
-- Reduced AWS costs by **45%** through FinOps practices
-- Cut **MTTR by 50%** with observability and on-call response
-- Deployment platform serving **20+ customer apps** across **3 AWS regions**
-- Automated **70%** of operational tasks
+- Cut AWS spend by **45%** through rightsizing, cleanup, and usage reviews
+- Reduced **MTTR by 50%** with Grafana, Prometheus, Loki, runbooks, and on-call routing
+- Built a deployment platform for **20+ customer apps** across **3 AWS regions**
+- Automated **70%** of recurring operations with Python, Shell scripts, and GitHub Actions
 
 <details>
 <summary>View all responsibilities</summary>
 
-- Designed and built AWS infrastructure with modular Terraform and CloudFormation, including multi-region EKS clusters provisioned in under 10 minutes and IAM administration, and applied FinOps practices to cut AWS costs by 45%.
-- Migrated workloads between different AWS accounts and regions with minimal downtime.
-- Built CI/CD pipelines on GitHub Actions covering lint, tests, build, and deploy in under 5 minutes per run, across backend services and mobile apps, and automated 70% of operational tasks with Python and Bash scripts on cron.
-- Built a deployment platform on GitHub Actions, Helm, and Argo CD with a React dashboard and YAML-driven config, used across 20+ customer apps in 3 AWS regions.
-- Managed and troubleshot production Kubernetes clusters, rotated through on-call, handled production incidents, and contributed to postmortems and SOP documentation; cut MTTR by 50%. 
-- Built the observability stack with Prometheus, Loki, and Grafana, an external prober for SSL and availability checks from outside the cluster, and Istio with Jaeger for distributed tracing.
-- Built Grafana dashboards for Kubernetes cluster and external EC2 instance health, application debugging, and capacity tracking.
+- Built AWS infrastructure with Terraform and CloudFormation, including multi-region EKS clusters provisioned in under 10 minutes, IAM, networking, storage, and Kubernetes add-ons.
+- Migrated workloads across AWS accounts and regions with planned cutovers and minimal downtime.
+- Built GitHub Actions pipelines for backend services and mobile apps, covering lint, tests, builds, image publishing, and deploys in under 5 minutes; automated recurring operations with Python and Shell scripts.
+- Shipped a deployment platform with GitHub Actions, Helm, Argo CD, React, and YAML config for 20+ customer apps in 3 AWS regions.
+- Operated production Kubernetes clusters, handled incidents, joined the on-call rotation, and wrote runbooks, SOPs, and postmortem notes.
+- Implemented the observability stack with Prometheus, Loki, Grafana, external HTTPS probes, Istio, Jaeger, and Kiali; reduced MTTR by 50%.
+- Created Grafana dashboards for Kubernetes health, EC2 health, application debugging, ingress traffic, capacity, and alert review.
 - Tuned PostgreSQL clusters to reduce resource usage by 35%, and automated backup and restore for Kubernetes resources and EBS/EFS persistent volumes.
-- Centralized authentication on Keycloak and managed the company workspace, cutting employee onboarding time by 70%.
-- Built and maintained REST APIs in Python and Go for payments, user management, and analytics across multiple products, including a live quiz platform with AI question generation (OpenAI), Stripe subscriptions, and LTI 1.3 integration, serving 200+ MAU.
+- Centralized authentication with Keycloak, handled AWS IAM administration, and reduced employee onboarding time by 70%.
+- Built REST APIs in Python and Go for payments, user management, analytics, and a live quiz platform with OpenAI quiz generation, Stripe subscriptions, LTI 1.3 support, and 200+ MAU.
 
 </details>
 
@@ -38,15 +38,38 @@ sidebar_position: 2
 
 :::note[Key Highlights]
 
-- Built custom internal platform replacing expensive third-party system
-- Managed **100+ SQL tables** with NestJS, React, and Prisma
+- Built an internal data platform that replaced a paid third-party tool
+- Exposed **100+ SQL tables** through NestJS, React, Prisma, and role-based access
 
 <details>
 <summary>View all responsibilities</summary>
 
-- Developed a custom internal platform using NestJS, React, and Prisma to replace an expensive third-party system, exposing 100+ database tables to the development team.
-- Implemented operations logging and role-based access control across the platform.
-- Deployed the platform on Docker and AWS ECS with CloudWatch monitoring.
+- Built a NestJS, React, and Prisma platform for browsing internal business data and debugging production issues.
+- Added role-based access control for admin, developer, and viewer roles.
+- Logged queries and data operations with user and timestamp metadata.
+- Deployed the frontend and backend with Docker on AWS ECS.
+- Configured CloudWatch logs for monitoring and troubleshooting.
+
+</details>
+
+:::
+
+---
+
+### IT Operations Intern
+**DRÄXLMAIER Group** · Sousse, On-site · **Sept 2022 - Oct 2022**
+
+:::note[Key Highlights]
+
+- Built a Python CLI for switch diagnostics and Excel reporting
+- Supported IT asset setup, activation, and warehouse interventions
+
+<details>
+<summary>View all responsibilities</summary>
+
+- Built a Python CLI that pulls data from HP network switches and exports Excel reports for local network troubleshooting.
+- Supported warehouse interventions, including IT asset setup and activation across sites.
+- Installed network cabling and managed IT assets.
 
 </details>
 
