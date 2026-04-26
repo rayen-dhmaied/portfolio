@@ -1,0 +1,1 @@
+"use strict";(globalThis.webpackChunkportfolio=globalThis.webpackChunkportfolio||[]).push([[8070],{4132(o){o.exports=JSON.parse('{"tags":[{"label":"terraform","permalink":"/portfolio/blog/tags/terraform","count":1},{"label":"iac","permalink":"/portfolio/blog/tags/iac","count":1},{"label":"aws","permalink":"/portfolio/blog/tags/aws","count":1}]}')}}]);
