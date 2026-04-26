@@ -8,7 +8,7 @@ sidebar_position: 2
 
 :::note[Key Highlights]
 
-- Cut AWS spend by **45%** through rightsizing, cleanup, and usage reviews
+- Cut AWS spend by **45%** by applying FinOps practices including, rightsizing, cleanup, and usage reviews
 - Reduced **MTTR by 50%** with Grafana, Prometheus, Loki, runbooks, and on-call routing
 - Built a deployment platform for **20+ customer apps** across **3 AWS regions**
 - Automated **70%** of recurring operations with Python, Shell scripts, and GitHub Actions
@@ -44,7 +44,7 @@ sidebar_position: 2
 <details>
 <summary>View all responsibilities</summary>
 
-- Built a NestJS, React, and Prisma platform for browsing internal business data and debugging production issues.
+- Built a NestJS, React, Material UI, Prisma, and PostgreSQL platform for browsing internal business data and debugging production issues.
 - Added role-based access control for admin, developer, and viewer roles.
 - Logged queries and data operations with user and timestamp metadata.
 - Deployed the frontend and backend with Docker on AWS ECS.
