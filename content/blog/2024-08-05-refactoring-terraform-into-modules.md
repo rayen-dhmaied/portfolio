@@ -5,11 +5,13 @@ authors: [rayen-dhmaied]
 tags: [terraform, iac, aws]
 ---
 
-I was working on an older Terraform project that managed a full EKS stack: VPC, cluster, node groups, and around ten Kubernetes add-ons. Everything lived in a single `main.tf` file that had grown to over a thousand lines. It worked, but it was really hard to navigate. Anytime I needed to make a change or add something new, I'd spend more time figuring out where things were than actually getting the work done.
+I worked on an older Terraform project that managed a full EKS stack: VPC, cluster, node groups, storage, and around ten Kubernetes add-ons. The whole stack lived in one `main.tf` file with more than a thousand lines.
+
+It worked. It was also hard to change. Adding one add-on meant scrolling through networking, IAM, EKS, and Helm resources just to find the right place.
 
 ```bash
 .
-├── main.tf      # 1000+ lines: VPC, EKS, add-ons, storage all in one file
+├── main.tf      # 1000+ lines: VPC, EKS, add-ons, storage
 ├── variables.tf
 ├── outputs.tf
 ├── providers.tf
@@ -17,64 +19,75 @@ I was working on an older Terraform project that managed a full EKS stack: VPC, 
 └── vars.tfvars
 ```
 
-It was obvious that I had to break things into modules. But how to do it without accidentally destroying anything is what I'm going to talk about.
+I wanted modules, but I did not want Terraform to recreate a live VPC with an EKS cluster attached to it. The refactor had to move code and state together.
 
 <!-- truncate -->
 ---
 
-## Why This Isn't Straightforward
+## The Risk
 
-When you move a resource into a module, its state address changes:
+Terraform tracks resources by state address.
 
-```
-# was
+```hcl
+# before
 aws_vpc.main
 
-# now
+# after
 module.vpc.aws_vpc.main
 ```
 
-Terraform doesn't know those are the same thing. If you just refactor the code and run `apply`, it will destroy the old resource and create a new one. For a VPC with a live EKS cluster on top of it, that's a full teardown.
+Those two addresses point to the same real VPC, but Terraform does not know that unless you tell it. If you move the resource block into a module and run `terraform apply`, Terraform can plan a destroy/create because the old address disappeared and a new address appeared.
 
-The fix is `terraform state mv`. It renames the address of a resource in the state file without touching the actual infrastructure. The whole approach is:
+For an EKS foundation, that plan tears down the base layer.
 
-1. Write the module
-2. Move the state addresses
-3. Run `plan` and verify zero changes before doing anything else
+Use `terraform state mv` to rename the state address without touching the real infrastructure:
+
+1. Copy resources into a module.
+2. Add the module call in the root.
+3. Move each old state address to its new module address.
+4. Run `terraform plan`.
+5. Continue only when the plan says no changes.
 
 ---
 
-## Deciding What Becomes a Module
+## Pick Module Boundaries
 
-Three questions to ask before you start:
+Start with lifecycle and dependencies, not folder names.
 
-**Does it have a single concern?** Resources like `aws_vpc`, `aws_subnet`, and `aws_nat_gateway` are all part of networking, so they belong together.
+**Group one concern.** VPC resources belong together: `aws_vpc`, subnets, route tables, internet gateway, NAT gateway, and EIPs.
 
-**Does it share a lifecycle?** `aws_eip` and `aws_nat_gateway` are always created and destroyed together.
+**Keep shared lifecycle together.** NAT gateways and their EIPs usually move as one unit.
 
-**Where are the dependency seams?** Sketch the flow:
+**Cut dependencies in one direction.** Sketch the module flow:
 
 ```hcl
-module "vpc" → module "eks" → module "addons"
-#  vpc_id          subnet_ids      cluster_name
-#  subnet_ids      oidc_arn        oidc_arn
+module "vpc" -> module "eks" -> module "addons"
+#  vpc_id        subnet_ids      cluster_name
+#  subnet_ids    oidc_arn        oidc_arn
 ```
 
-Each arrow represents a dependency, an output on one side and a variable on the other. If two groups of resources reference each other in both directions, they belong in the same module.
+Each arrow should map to an output on the left and an input on the right. If two groups need values from each other, they probably belong in the same module.
+
+For this stack, I split the code into:
+
+- `vpc`: networking resources
+- `eks`: cluster, node groups, OIDC, cluster IAM
+- `addons`: controllers, monitoring add-ons, Kubernetes manifests
+- `storage`: storage classes, EBS/EFS-related resources
 
 ---
 
-## Audit the State First
+## Audit State First
 
-Before writing a single module, run:
+Before writing modules, list the current state:
 
 ```bash
 terraform state list
 ```
 
-Every line is an address you'll need to remap. Build a mapping table, old address on the left, new module address on the right.
+Every managed resource needs a destination address. Build a mapping table before you run any `state mv`.
 
-For a VPC module, it looks like:
+For the VPC module, the mapping looked like this:
 
 | Old                           | New                                      |
 | ----------------------------- | ---------------------------------------- |
@@ -89,17 +102,26 @@ For a VPC module, it looks like:
 | `aws_subnet.public[1]`        | `module.vpc.aws_subnet.public[1]`        |
 | `aws_subnet.public[2]`        | `module.vpc.aws_subnet.public[2]`        |
 
-Data sources (`data.*`) don't have persistent state and are re-evaluated on every plan. If they're shared across modules, keep them in the root `main.tf` and pass their values in as variables. Otherwise, move them into the module where they're used.
+Data sources (`data.*`) do not need state moves. Terraform reads them during planning. If several modules need the same data source, keep it in the root and pass values down as variables. If only one module uses it, put it inside that module.
 
-## Writing the Module
+---
 
-**IMPORTANT:** Start with one module. If it's successfully applied, move to the next one.
+## Write One Module
 
-Each module gets three files: `variables.tf`, `main.tf`, and `outputs.tf`.
+Move one module at a time. Do not move VPC, EKS, add-ons, and storage in one commit.
 
-The resources in the module `main.tf` should be an **exact copy** of what's in your root `main.tf`. Don't rename or refactor anything. Other improvements should come after the new module is applied.
+Each module gets the same three files:
 
-The VPC module is shown in full below. The other modules (`eks`, `addons`, `storage`) follow the exact same pattern, only the resources and variable names differ.
+```bash
+modules/vpc/
+├── main.tf
+├── variables.tf
+└── outputs.tf
+```
+
+Copy the resource blocks exactly. Do not rename resources, change tags, clean up variables, or improve naming during the move. Save those changes for a later commit after the state move produces a clean plan.
+
+Example VPC module:
 
 ```hcl
 # modules/vpc/variables.tf
@@ -108,12 +130,12 @@ variable "region"   { type = string }
 variable "env"      { type = string }
 variable "eks_name" { type = string }
 
-variable "vpc_cidr_block"        { type = string }
-variable "private_subnets"       { type = list(string) }
-variable "public_subnets"        { type = list(string) }
-variable "enable_nat_gateway"    { type = bool; default = true }
-variable "enable_dns_support"    { type = bool; default = true }
-variable "enable_dns_hostnames"  { type = bool; default = true }
+variable "vpc_cidr_block"       { type = string }
+variable "private_subnets"      { type = list(string) }
+variable "public_subnets"       { type = list(string) }
+variable "enable_nat_gateway"   { type = bool; default = true }
+variable "enable_dns_support"   { type = bool; default = true }
+variable "enable_dns_hostnames" { type = bool; default = true }
 ```
 
 ```hcl
@@ -186,11 +208,12 @@ output "all_subnet_ids" {
   )
 }
 ```
+
 ---
 
-## Provider Declarations in Modules
+## Declare Non-HashiCorp Providers
 
-This catches people off guard. If your module uses a provider that isn't from HashiCorp (`hashicorp/<provider_name>`), for example `gavinbunney/kubectl`, you have to declare it explicitly in the module's `providers.tf`. Otherwise, Terraform can't find it during init.
+Terraform assumes providers come from the `hashicorp` namespace unless you say otherwise. If a module uses a provider like `gavinbunney/kubectl`, declare it inside the module.
 
 ```hcl
 # modules/addons/providers.tf
@@ -205,13 +228,23 @@ terraform {
 }
 ```
 
-You don't configure the provider inside the module (no region, no credentials). That stays in the root. The module just declares what it needs, and then you pass it from the root `main.tf`. Only declare providers in the module that are not under the `hashicorp` namespace.
+Do not configure the provider inside the module. Keep region, credentials, cluster endpoint, and token settings in the root. The module declares what it needs, and the root passes the configured provider in.
+
+```hcl
+module "addons" {
+  source = "./modules/addons"
+
+  providers = {
+    kubectl = kubectl
+  }
+}
+```
 
 ---
 
-## Updating the Root
+## Update the Root Module
 
-Replace the flat resource blocks with a module call and update any references that pointed to the moved resources:
+Replace the moved resource blocks with a module call. Then update references to use module outputs.
 
 ```hcl
 # main.tf
@@ -231,10 +264,8 @@ module "vpc" {
 module "eks" {
   source = "./modules/eks"
 
-  # outputs from vpc flow directly into eks inputs
   vpc_id     = module.vpc.vpc_id
   subnet_ids = module.vpc.all_subnet_ids
-  # ...
 }
 
 module "addons" {
@@ -246,47 +277,56 @@ module "addons" {
 
   cluster_name      = module.eks.cluster_name
   oidc_provider_arn = module.eks.oidc_provider_arn
-  # ...
 }
 ```
----
 
-## Moving the State
-
-Once the code is ready, run `terraform init` to register the new module sources, then start moving addresses:
+Run `terraform init` after adding module sources.
 
 ```bash
 terraform init
+```
 
+---
+
+## Move the State
+
+Move every old address to its new module address.
+
+```bash
 terraform state mv \
   aws_vpc.main \
   module.vpc.aws_vpc.main
 
 terraform state mv \
-  "aws_subnet.private[0]" \
-  "module.vpc.aws_subnet.private[0]"
+  'aws_subnet.private[0]' \
+  'module.vpc.aws_subnet.private[0]'
 
 terraform state mv \
   'aws_nat_gateway.nat[0]' \
   'module.vpc.aws_nat_gateway.nat[0]'
 ```
 
-A few things that will catch you:
+Keep indexes and keys exactly as Terraform lists them.
 
-**Indexed resources** keep their index in the new address.
-`aws_subnet.private[0]` becomes `module.vpc.aws_subnet.private[0]`, not `module.vpc.aws_subnet.private`.
+```hcl
+aws_subnet.private[0]
+module.vpc.aws_subnet.private[0]
+```
 
-**`for_each` resources with long string keys**, like `aws_subnet` resources indexed by position, need the full key. Use quotes around the whole address to avoid shell escaping issues:
+For `for_each` resources with string keys, quote the full address:
 
 ```bash
 terraform state mv \
-  'aws_subnet.public[0]' \
-  'module.vpc.aws_subnet.public[0]'
+  'aws_iam_role_policy_attachment.this["AmazonEKSWorkerNodePolicy"]' \
+  'module.eks.aws_iam_role_policy_attachment.this["AmazonEKSWorkerNodePolicy"]'
 ```
 
-For resources with dynamic keys you don't want to hardcode, like subnets created from a list, a loop works well:
+For repeated resources, script the move. Add `set -e` so the script stops on the first failed move.
 
 ```bash
+#!/bin/bash
+set -e
+
 for key in $(terraform state list | grep 'aws_subnet.private'); do
   suffix=$(echo "$key" | sed 's/aws_subnet.private//')
   terraform state mv \
@@ -295,33 +335,39 @@ for key in $(terraform state list | grep 'aws_subnet.private'); do
 done
 ```
 
-It's better to create a bash script to move Terraform state instead of doing it manually, to avoid errors. Make sure to put `set -e` after `#!/bin/bash` to stop script execution at the first error.
+Run the script for one module, then plan before touching the next module.
 
 ---
 
-## Expected Plan Output
+## Expect a No-Change Plan
 
-After all the state moves, run a plan:
+After the state moves, run:
 
 ```bash
 terraform plan
 ```
 
-It has to say:
+You want this output:
 
-```
+```text
 No changes. Your infrastructure matches the configuration.
 ```
 
-Anything else means something was missed or a reference changed value between the flat and module versions. The most common cause is an output that resolves slightly differently. Check the plan diff carefully, find the resource that's showing a change, and trace back which input changed.
+If Terraform shows changes, stop. Do not apply. Find the resource with a diff and trace the changed input back to the module call or output. The common causes are:
 
-Don't apply until the plan is clean. Once it is, you're done, the refactor is complete and nothing was recreated.
+- A tag changed during the copy.
+- A default value differs between root and module variables.
+- A list order changed.
+- A reference now points to a different output.
+- A provider alias did not get passed into the module.
 
-The Terraform project structure looked like this after applying all modules.
+Once the plan is clean, commit the module move. Then repeat the same process for the next module.
+
+The final structure looked like this:
 
 ```bash
 .
-├── main.tf          # only module calls
+├── main.tf          # module calls only
 ├── variables.tf
 ├── outputs.tf
 ├── providers.tf
@@ -341,3 +387,5 @@ The Terraform project structure looked like this after applying all modules.
         ├── outputs.tf
         └── providers.tf
 ```
+
+The folder layout helped, but the safety came from the process: move code and state together, one module at a time, and require a no-change plan before moving on.
