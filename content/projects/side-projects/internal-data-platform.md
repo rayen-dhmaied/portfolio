@@ -1,7 +1,7 @@
 ---
 title: Box2Home - Internal Data Platform
 tags: [NestJS, React, Material UI, PostgreSQL, AWS, ECS, Docker, TypeScript]
-description: Internal data and debugging platform for Box2Home, built in NestJS and React on AWS ECS to replace an expensive third-party tool.
+description: Internal data and debugging platform built during my bachelor internship as a software developer, using NestJS, React, PostgreSQL, Docker, and AWS ECS.
 ---
 
 [View Frontend Source Code on GitHub](https://github.com/rayen-dhmaied/box2home-frontend) →  
@@ -10,125 +10,126 @@ description: Internal data and debugging platform for Box2Home, built in NestJS 
 ## Overview
 
 ### What it is
-An internal web app for Box2Home's developers. It lets the team query the production database, browse audit logs, and debug data issues without anyone holding direct write access to production.
+An internal web app for Box2Home developers to inspect business data, browse audit logs, and debug production issues without direct write access to the production database.
+
+I built it during my bachelor-degree internship as a software developer. The backend uses NestJS and PostgreSQL, the frontend uses React and Material UI, and the app runs on AWS ECS with Docker containers.
 
 ### Why it exists
-The company was paying a third-party SaaS for the same workflow. The bill was high, the tool didn't fit the way the team worked, and any change to that workflow had to wait for the vendor's roadmap. I built this as my end-of-studies internship project to replace it with something the team owns.
+Box2Home used a third-party SaaS tool for internal data browsing and debugging. The tool cost money every month, did not match the team's workflow, and gave the company little control over feature changes.
+
+My internship project replaced the daily-use parts of that tool with an internal platform the team owned: authentication, role-based access, data exploration, audit logs, and admin screens.
 
 ### Outcome
 
 :::tip Key Results
-- Removed the third-party subscription
-- Read-only path to the production database, gated by role
-- Audit log of every query and every modification, with the user attached
-- UI shaped around the team's workflow
+- Replaced the third-party subscription for the core workflow
+- Read-only production database access controlled by roles
+- Audit trail for queries and data operations, tied to the user
+- React UI shaped around the team's debugging tasks
+- Dockerized NestJS and React services deployed on AWS ECS
 :::
 
 ---
 
 ## Tech Stack
 
-**Backend:** NestJS (TypeScript), PostgreSQL  
+**Backend:** NestJS, TypeScript, Prisma, PostgreSQL  
 **Frontend:** React, Material UI  
-**Deployment:** Docker, AWS ECS  
-**Authentication:** JWT
+**Deployment:** Docker, AWS ECS, CloudWatch Logs  
+**Authentication:** JWT, role-based access control
 
 ---
 
 ## Implementation Setup
 
-### Backend (NestJS)
-A modular NestJS backend with one module per concern.
+### Backend
+I built a modular NestJS backend with separate modules for auth, users, data access, and audit logs.
 
 **Auth:**
-- JWT authentication
-- Role-based access (admin, developer, viewer)
-- Token refresh
+- JWT login and refresh
+- Role-based access for admin, developer, and viewer roles
+- Guards on protected endpoints
 
 **User Management:**
-- CRUD for accounts
+- Account CRUD
 - Role assignment
 - Activity tracking
 
-**Data Access Modules:**
-One controller / service / repository trio per data entity:
-- Services hold the query and transformation logic
-- Repositories talk to the database via Prisma
-- Controllers expose the REST endpoints the frontend consumes
+**Data Access:**
+- Controller, service, and repository layers per data area
+- Prisma for database access
+- Read-only connection to the production database
+- Input validation before query execution
+- Pagination on list endpoints
 
-**Audit & Operation Logs:**
-- Every query a user runs is logged
-- Every modification is logged with actor and timestamp
-- The audit log is searchable from the UI
-- Stored in a separate database from the production read-target
+**Audit and Operation Logs:**
+- Logs each query with user, timestamp, target entity, and filters
+- Logs data operations performed through the platform
+- Stores audit records in a separate database from the production read target
+- Exposes a searchable audit log in the UI
 
 **Databases:**
 - PostgreSQL for the platform's own state
-- Read-only connection to the production database
-- A separate logging database for the audit trail
+- Read-only PostgreSQL connection to production data
+- Separate logging database for audit records
 
-### Frontend (React + Material UI)
-A web UI shaped around the team's debugging tasks:
+### Frontend
+I built a React and Material UI frontend around the workflows developers used during debugging.
 
-- Data explorer for browsing and querying database tables
-- Visual query builder
-- Results view with tables, charts, and export
-- Admin screens for user and role management
+- Data explorer for browsing tables and records
+- Query builder with filters
+- Results view with pagination, sorting, and export
+- Admin screens for users and roles
 - Audit log viewer with filters and search
-- Login flow with JWT handling
-
-**Material UI Components:**
-- Data tables with pagination, sort, and filter
-- Forms for user management and query building
-- Navigation and layout components
-- Layouts that hold up on desktop and tablet
+- JWT login flow and session handling
 
 ### Deployment
 
 **Containers:**
 - Multi-stage Dockerfile for the NestJS backend
 - Multi-stage Dockerfile for the React production build
+- Runtime config passed through environment variables
 
 **AWS ECS:**
-- Backend on ECS Fargate
-- Frontend served from ECS behind a load balancer
-- Configuration via environment variables
-- Logs into CloudWatch
+- Backend deployed on ECS Fargate
+- Frontend deployed as a containerized web app
+- Load balancer in front of the services
+- CloudWatch Logs for application output
 
 ---
 
 ## Key Challenges & Solutions
 
-### Challenge 1: Picking What to Build, Given the Internship Window
+### Challenge 1: Choosing the Right Internship Scope
 
-**Problem:** The vendor tool had years of features built on top of it. Cloning every screen in an internship wouldn't have shipped on time, but skipping the wrong ones would have meant the team kept the subscription anyway.
+**Problem:** The SaaS tool had more features than I could rebuild during an internship. If I copied the wrong screens, the team would keep paying for the old tool.
 
-**Solution:** I sat with the developers who used the vendor tool and worked out which screens they opened every day and which they never touched. The MVP shipped with the high-traffic features (auth, data querying, audit logs) and dropped the long tail.
+**Solution:** I reviewed the workflow with the developers who used the tool and focused on the screens they opened during daily debugging: login, data browsing, query filters, audit logs, and user management. I left low-use features out of the first version.
 
 :::success Result
-The team moved over and the subscription was cancelled. The dropped features didn't come back as missing in feedback.
+The team moved the core workflow to the internal platform and cancelled the third-party subscription.
 :::
 
 ---
 
-### Challenge 2: Safe Production Database Access
+### Challenge 2: Safe Production Data Access
 
-**Problem:** The platform exists to give developers access to the production database, which is also the most direct way to corrupt production data. It had to be useful without exposing write paths from a UI screen.
+**Problem:** Developers needed production data for debugging, but the platform could not expose a write path to production from a web UI.
 
-**Solution:** The connection used by the data-access modules is read-only at the database level, not just at the application level. Roles control what each user can see; the audit log captures every query with the user and timestamp attached; authentication is enforced on every request.
+**Solution:** I used a read-only database user for production access. The backend enforced roles on each endpoint, and the audit module logged every query with the user and timestamp. The platform stored audit records outside the production read target.
 
 :::success Result
-No write path into the production database from the platform. Every read is attributable to a user through the audit log.
+Developers could inspect production data without direct write access, and each read had an audit trail.
 :::
 
 ---
 
-### Challenge 3: Query Performance on Big Tables
+### Challenge 3: Query Performance on Large Tables
 
-**Problem:** Some production tables hold millions of rows. The vendor tool felt fast on them, so a naive replacement that did full-table scans would have shipped slower than what it replaced.
+**Problem:** Some production tables held millions of rows. A naive table browser would run slow queries and render too much data in the browser.
 
-**Solution:** Pagination and explicit `LIMIT/OFFSET` on every list endpoint, indexes on the columns the most-used queries filter by, and virtual scrolling on the frontend so a large result set doesn't render every row at once. Repeated queries hit a short-TTL cache before they reach the database.
+**Solution:** I added pagination and explicit limits on list endpoints, indexed the columns used by the common filters, and used paginated tables in the React UI. Repeated queries could use a short-lived cache before hitting the database again.
 
 :::success Result
-Data screens stay responsive on tables with millions of rows. Big result sets don't stall the UI.
+Data screens stayed usable on large tables, and the UI did not freeze on big result sets.
 :::

@@ -1,7 +1,7 @@
 ---
-title: University Social Network - Microservices Backend
+title: Horizon Social Network - Microservices Backend
 tags: [Go, Microservices, MongoDB, Neo4j, Istio, Keycloak, Kubernetes, Docker]
-description: Microservices social network with two Go services (posts on MongoDB, followers on Neo4j) running on Kubernetes behind an Istio service mesh and Keycloak auth.
+description: Go microservices backend for a social network, deployed on Kubernetes with Istio mTLS, Keycloak JWT validation, MongoDB for posts, and Neo4j for follower graph queries.
 ---
 
 [View Source Code on GitHub](https://github.com/rayen-dhmaied/hornet) →
@@ -9,25 +9,31 @@ description: Microservices social network with two Go services (posts on MongoDB
 ## Overview
 
 ### What it is
-HorNet (Horizon Social Network) is the backend of a small social network, split into two Go services. The Posts service stores user posts in MongoDB; the Followers service models the social graph in Neo4j. Both run on Kubernetes with Istio in front and Keycloak handling authentication.
+Horizon Social Network is a Go backend for a campus social platform. It has two services: Posts stores user posts in MongoDB, and Followers stores the social graph in Neo4j.
+
+Both services run on Kubernetes behind Istio. Keycloak handles identity, the Istio ingress gateway validates JWTs, and the mesh encrypts service-to-service traffic with mTLS.
 
 ### Why it exists
-A university project. The interesting design call was the database side: posts and followers are different shapes of data, so each side gets its own service and its own database. Splitting them also lets each scale independently and keeps the two query styles (Cypher graph traversal and MongoDB document queries) inside their own service boundary.
+I built it as part of a university workshop project to apply microservices and Kubernetes concepts in practice. I treated it like a production backend: posts and follower relationships have different data shapes, so I split them into separate services with separate databases instead of forcing both workloads into one model.
+
+The workshop gave me room to apply the parts I care about as a cloud and DevOps engineer: container builds, Kubernetes deployment, service mesh policy, auth at the edge, and clear service boundaries.
 
 ### Outcome
 
 :::tip Key Results
-- MongoDB for post documents, Neo4j for the follower graph
-- Istio handles mTLS between services and JWT validation against Keycloak at the ingress gateway
-- Handler → Service → Repository layering inside each service
-- Multi-stage builds with distroless base images, under 10MB per service
+- Two Go services with handler, service, and repository layers
+- MongoDB stores post documents and timeline queries
+- Neo4j stores `User` nodes and `FOLLOWS` relationships
+- Istio validates Keycloak JWTs at ingress and enforces mTLS in the mesh
+- Multi-stage Docker builds produce distroless images under 10MB per service
+- Kubernetes manifests cover deployments, services, config, secrets, and Istio routing
 :::
 
 ---
 
 ## Architecture
 
-### High-level Flow
+### High-Level Flow
 
 ```mermaid
 graph TD
@@ -47,14 +53,14 @@ graph TD
 ```
 
 :::info Key Components
-Two Go microservices behind Istio. The ingress gateway validates the JWT against Keycloak before any service sees the request, and the mesh enforces mTLS between services. Posts writes to MongoDB; Followers writes to Neo4j.
+The client enters through the Istio ingress gateway. Istio validates the Keycloak JWT before the request reaches a service, then routes traffic through the mesh. Posts reads and writes MongoDB documents. Followers handles graph queries in Neo4j.
 :::
 
 ---
 
 ## Tech Stack
 
-**Backend:** Go, Gin framework  
+**Backend:** Go, Gin  
 **Databases:** MongoDB, Neo4j  
 **Service Mesh:** Istio  
 **Authentication:** Keycloak  
@@ -65,29 +71,31 @@ Two Go microservices behind Istio. The ingress gateway validates the JWT against
 
 ## Implementation Setup
 
-### Microservices Architecture
-Two independent Go services, each laid out the same way: handler → service → repository.
+### Service Layout
+Each service follows the same Go structure: handler -> service -> repository.
 
-**Posts Service (MongoDB):**
-- CRUD over user posts
-- User-timeline queries
-- RESTful endpoints with an OpenAPI spec at `api/openapi/posts.json`
+**Posts Service:**
+- CRUD for user posts
+- Timeline queries by `user_id`
+- MongoDB repository with an index on `user_id`
+- OpenAPI spec at `api/openapi/posts.json`
 
-**Followers Service (Neo4j):**
-- Follow / unfollow
+**Followers Service:**
+- Follow and unfollow operations
 - Followers and following lookups
-- Friend suggestions via graph traversal
-- RESTful endpoints with an OpenAPI spec at `api/openapi/followers.json`
+- Friend suggestions through graph traversal
+- Neo4j repository with Cypher queries
+- OpenAPI spec at `api/openapi/followers.json`
 
 **Project Layout:**
-- `cmd/`: service entry points (`posts/main.go`, `followers/main.go`)
-- `api/`: HTTP handlers, models, repositories, services, routers
+- `cmd/`: service entry points for `posts` and `followers`
+- `api/`: handlers, models, repositories, services, and routers
 - `config/`: per-service configuration
-- `common/`: shared utilities (logger)
-- `Makefile`: build, lint, format, docker
+- `common/`: shared logger
+- `Makefile`: build, lint, format, Docker targets, and cleanup
 
-### Multi-Stage Docker Builds
-One Dockerfile, parameterised with build args, used for both services:
+### Docker Builds
+One Dockerfile builds both services through build args:
 
 ```dockerfile
 FROM golang:1.23.2 AS builder
@@ -106,31 +114,33 @@ ENV GIN_MODE=release
 ENTRYPOINT ["./app"]
 ```
 
-Notes on the build:
-- Builder stage carries the full Go toolchain and compiles the binary
-- Runtime is `distroless/static-debian12`: no shell, no package manager
-- `CGO_ENABLED=0` produces a static binary with no libc dependency
-- `-ldflags="-s -w"` strips debug info and the symbol table
-- `SERVICE` (`posts` / `followers`) and `PORT` are passed in as build args
-- Final image: under 10MB per service
+Build choices:
+- Builder stage keeps the Go toolchain out of the runtime image
+- `CGO_ENABLED=0` creates a static binary
+- `-ldflags="-s -w"` strips debug data and the symbol table
+- Distroless runtime removes shell and package manager surface area
+- `SERVICE` and `PORT` choose the target service at build time
 
 ### Database Design
 
-**MongoDB (Posts):**
-- Collection `posts` with `user_id`, `content`, `created_at`, `updated_at`
-- Index on `user_id` for the timeline query
-- Document layout leaves room to add post attributes without a migration
+**MongoDB for Posts:**
+- `posts` collection with `user_id`, `content`, `created_at`, and `updated_at`
+- `user_id` index for timeline reads
+- Document structure leaves room for post fields such as media, reactions, or visibility settings
 
-**Neo4j (Followers):**
-- `User` nodes carrying `user_id` and `username`
-- `FOLLOWS` directional relationships (`User A` → `User B`)
-- Cypher queries:
-  - Followers: `MATCH (follower)-[:FOLLOWS]->(user) WHERE user.user_id = $id`
-  - Following: `MATCH (user)-[:FOLLOWS]->(following) WHERE user.user_id = $id`
-  - Friend suggestions: graph traversal over mutual connections
+**Neo4j for Followers:**
+- `User` nodes with `user_id` and `username`
+- Directional `FOLLOWS` relationships
+- Cypher queries for followers, following, and mutual-connection suggestions
+
+Example queries:
+- Followers: `MATCH (follower)-[:FOLLOWS]->(user) WHERE user.user_id = $id`
+- Following: `MATCH (user)-[:FOLLOWS]->(following) WHERE user.user_id = $id`
+- Suggestions: traverse mutual connections and exclude users already followed
 
 ### Build System
-Makefile targets cover the development loop:
+The Makefile keeps the local loop short:
+
 ```bash
 make build SERVICE=posts
 make build-container SERVICE=followers PORT=8081
@@ -140,69 +150,69 @@ make fmt
 make clean
 ```
 
-### Istio Service Mesh Configuration
+### Istio and Keycloak
 
 **mTLS:**
-- Strict mutual TLS between services
-- Certificate rotation handled by Istio
-- Service-to-service traffic is encrypted end to end
+- Istio enforces mutual TLS between services
+- Istio handles certificate rotation
+- Services communicate over in-mesh ClusterIP routes
 
-**Authentication via Keycloak:**
-- Istio `RequestAuthentication` points at the Keycloak JWKS endpoint
-- The ingress gateway validates the JWT before any service sees the request
-- An `AuthorizationPolicy` rejects unauthenticated traffic
-- Services receive the validated user identity in request headers
+**Authentication:**
+- `RequestAuthentication` points to the Keycloak JWKS endpoint
+- `AuthorizationPolicy` rejects unauthenticated requests at ingress
+- Services receive validated identity headers instead of parsing JWTs themselves
 
-**Traffic management:**
+**Traffic policy:**
 - Load balancing across replicas
-- Retries and circuit breaking
-- Timeout policies
+- Timeouts for service calls
+- Retry and circuit-breaking policy at the mesh layer
 
-### Deployment Strategy
-- One Kubernetes Deployment per service with multiple replicas
-- ClusterIP services for in-mesh traffic
-- Istio `VirtualService` for external routing
-- Environment variables:
-  - Posts: `POSTS_PORT`, `MONGO_URI`, `MONGO_DB`, `FOLLOWERS_SERVICE_URL`
-  - Followers: `FOLLOWERS_PORT`, `NEO4J_URI`, `NEO4J_DB`, `NEO4J_USER`, `NEO4J_PASSWORD`, `POSTS_SERVICE_URL`
-- Service discovery through internal cluster URLs
-- ConfigMaps for connection strings and service URLs
-- Secrets for database credentials
+### Kubernetes Deployment
+- One Deployment per service
+- ClusterIP Services for in-mesh traffic
+- Istio `VirtualService` for external routes
+- ConfigMaps for service URLs and non-secret connection settings
+- Secrets for MongoDB and Neo4j credentials
+- Environment variables for ports, database URIs, and service URLs
+
+Service configuration:
+- Posts: `POSTS_PORT`, `MONGO_URI`, `MONGO_DB`, `FOLLOWERS_SERVICE_URL`
+- Followers: `FOLLOWERS_PORT`, `NEO4J_URI`, `NEO4J_DB`, `NEO4J_USER`, `NEO4J_PASSWORD`, `POSTS_SERVICE_URL`
 
 ---
 
 ## Key Challenges & Solutions
 
-### Challenge 1: Picking the Right Database for Each Side
+### Challenge 1: Choosing the Right Database Per Workload
 
-**Problem:** Posts are document-shaped, with attributes I knew would change as features arrived. Followers are graph-shaped, with the interesting queries being multi-hop traversals like mutual connections and friend suggestions. Forcing both into one database meant either schema churn on the post side or recursive joins on the follower side.
+**Problem:** Posts fit a document model. Followers fit a graph model. Putting both in one database would either complicate timeline reads or push graph traversal into application code.
 
-**Solution:** I split the workload into two services. Posts on MongoDB, where the document model absorbs new attributes without a migration and an index on `user_id` covers the timeline query. Followers on Neo4j, where Cypher does graph traversal in one query instead of N application-side joins. When a feature needs both (a feed of posts from people you follow), one service calls the other over REST.
+**Solution:** I split the backend by workload. Posts uses MongoDB for document storage and indexed timeline reads. Followers uses Neo4j for relationship traversal and friend suggestions. When a feature needs both sides, one service calls the other over REST.
 
 :::success Result
-Each side runs against the database its workload fits. Friend-suggestion queries are one Cypher traversal instead of a join chain.
+Each service uses a database that matches its query pattern. Friend suggestions stay in Cypher instead of turning into nested application-side joins.
 :::
 
 ---
 
-### Challenge 2: Authentication at the Mesh Layer
+### Challenge 2: Keeping Auth Out of Each Service
 
-**Problem:** Authenticating in every service means duplicate JWT-parsing code in two places today and four places tomorrow, and one of those copies will eventually drift.
+**Problem:** Adding JWT parsing to each service would duplicate security code. A third service would need the same middleware again.
 
-**Solution:** I moved authentication out of the services. An Istio `RequestAuthentication` validates JWTs against Keycloak at the ingress gateway. An `AuthorizationPolicy` rejects unauthenticated requests before they reach any service. Each service trusts the headers Istio injects (`x-auth-request-user`) and reads identity from there.
+**Solution:** I moved authentication to Istio. The ingress gateway validates Keycloak JWTs through `RequestAuthentication`, and `AuthorizationPolicy` blocks unauthenticated traffic before it reaches Go. Services read the identity headers Istio passes through.
 
 :::success Result
-The services contain no auth code. A new service joins the mesh and inherits the same auth posture without any JWT-parsing code of its own.
+The Go services do not carry JWT parsing code. A new service can join the mesh and inherit the same auth policy.
 :::
 
 ---
 
-### Challenge 3: Shrinking the Docker Images
+### Challenge 3: Shrinking Runtime Images
 
-**Problem:** A Go binary inside a standard distro base image landed over 100MB. Push and pull are slow on a slow link, and the base image carries a stack of packages neither service uses.
+**Problem:** A Go binary on a standard Linux base image produced images over 100MB. That slowed image pulls and shipped packages the services did not need.
 
-**Solution:** Multi-stage builds. The builder stage holds the full Go toolchain and produces a statically linked binary (`CGO_ENABLED=0`). The runtime stage is `gcr.io/distroless/static-debian12`: no shell, no package manager, just the binary. `-ldflags="-s -w"` strips the debug info and symbol table.
+**Solution:** I used multi-stage builds. The builder image compiles a static Go binary, and the runtime image uses `gcr.io/distroless/static-debian12`. The final image contains the binary and little else.
 
 :::success Result
-Each image dropped to under 10MB, about a 90% cut from the distro-base build.
+Each service image dropped below 10MB, about a 90% reduction from the distro-base build.
 :::
