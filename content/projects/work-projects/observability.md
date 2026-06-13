@@ -23,7 +23,7 @@ I wanted one dashboard, one alert path, and one external check that sees what cu
 - Prometheus and Loki feed one Grafana per environment
 - External HTTPS checks from a separate Lightsail instance
 - Public Uptime Kuma status page for customer-facing incidents
-- Runbook attached to each alert
+- Per-alert runbooks (commands, dashboards, owners, rollback)
 - Lightweight on-call rotation with escalation for unacknowledged alerts
 :::
 

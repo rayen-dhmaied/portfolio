@@ -29,8 +29,6 @@ I split the platform along that grain. Go owns WebSocket sessions and live game 
 - LTI 1.3 deep linking for LMS course launches
 - Admin dashboard with live KPIs and historical snapshots
 - Sticky WebSocket routing that scales horizontally without breaking in-flight games
-- 1,200+ registered users
-- p95 API latency under 100ms on core endpoints
 :::
 
 ---
