@@ -12,7 +12,7 @@ const config: Config = {
     github: 'rayen-dhmaied',
     linkedin: 'rayen-dhmaied',
     email: 'rayen.dhmaied@horizon-tech.tn',
-    bio: "Keeping the infrastructure out of the way so developers can focus on building.",
+    bio: "I build and run cloud infrastructure, and write the backend that runs on it.",
     phone: '+216 00 000 000',
   },
 
