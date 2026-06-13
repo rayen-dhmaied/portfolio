@@ -7,7 +7,7 @@
   --portfolio-surface: #f4f4f8;
   --portfolio-ink: #1a1b35;
   --portfolio-ink-2: #4d4f6f;
-  --portfolio-ink-3: #9498b3;
+  --portfolio-ink-3: #6e7191;
   --portfolio-gold: #5b5bd6;
   --portfolio-gold-dim: #e8e8ff;
   --portfolio-soft-bg: #eeeefb;
@@ -50,7 +50,7 @@
   --portfolio-surface: #10101e;
   --portfolio-ink: #e8e9f0;
   --portfolio-ink-2: #9092b0;
-  --portfolio-ink-3: #54577a;
+  --portfolio-ink-3: #787ca8;
   --portfolio-gold: #7e7df0;
   --portfolio-gold-dim: #1d1d3d;
   --portfolio-soft-bg: #181830;
@@ -71,6 +71,29 @@ body {
   line-height: 1.65;
   background: var(--portfolio-bg);
   color: var(--portfolio-ink);
+}
+
+html { scroll-behavior: smooth; }
+
+/* ─── A11y: keyboard focus & reduced motion ──────────────── */
+
+a:focus-visible,
+button:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--portfolio-gold);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 /* ─── Headings ───────────────────────────────────────────── */
@@ -228,8 +251,12 @@ code, pre, kbd { font-family: var(--font-mono); }
   color: var(--portfolio-ink-3);
 }
 
-.navbar__link:hover,
-.navbar__link--active { color: var(--portfolio-ink); }
+.navbar__link {
+  transition: color 0.15s ease;
+}
+
+.navbar__link:hover { color: var(--portfolio-ink); }
+.navbar__link--active { color: var(--portfolio-gold); }
 
 /* ─── Footer ─────────────────────────────────────────────── */
 

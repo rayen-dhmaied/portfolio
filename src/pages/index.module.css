@@ -1,14 +1,57 @@
 .main {
+  position: relative;
   background: var(--portfolio-bg);
   height: calc(100vh - 60px);
   overflow: hidden;
 }
 
+/* Soft aurora glow behind the hero for depth.
+   Uses an ellipse (not circle) so the gradient fades to transparent on both
+   axes before the element's box edges — otherwise a narrow box clips the
+   still-colored part of a circle and shows a hard seam. */
+.main::before {
+  content: '';
+  position: absolute;
+  top: -15%;
+  right: -8%;
+  width: 50%;
+  height: 80%;
+  background: radial-gradient(ellipse at center, var(--portfolio-soft-bg) 0%, transparent 70%);
+  opacity: 0.6;
+  pointer-events: none;
+  z-index: 0;
+}
+
+:global([data-theme='dark']) .main::before {
+  background: radial-gradient(ellipse at center, rgba(126, 125, 240, 0.18) 0%, transparent 70%);
+  opacity: 1;
+}
+
 .splitLayout {
+  position: relative;
+  z-index: 1;
   display: grid;
   grid-template-columns: 1.3fr 1fr;
   height: 100%;
 }
+
+/* ─── Entrance motion ────────────────────────────────────── */
+
+@keyframes heroReveal {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.heroLeft > * { animation: heroReveal 0.6s ease both; }
+.heroLeft > *:nth-child(1) { animation-delay: 0.05s; }
+.heroLeft > *:nth-child(2) { animation-delay: 0.13s; }
+.heroLeft > *:nth-child(3) { animation-delay: 0.21s; }
+.heroLeft > *:nth-child(4) { animation-delay: 0.29s; }
+.heroLeft > *:nth-child(5) { animation-delay: 0.37s; }
+
+.heroRight > * { animation: heroReveal 0.6s ease both; }
+.heroRight > *:nth-child(1) { animation-delay: 0.24s; }
+.heroRight > *:nth-child(2) { animation-delay: 0.38s; }
 
 /* ─── Left ───────────────────────────────────────────────── */
 
@@ -32,11 +75,26 @@
 }
 
 .availableDot {
+  position: relative;
   width: 8px;
   height: 8px;
   border-radius: 50%;
   background: #5a9e6a;
   box-shadow: 0 0 0 3px rgba(90, 158, 106, 0.2);
+}
+
+.availableDot::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: #5a9e6a;
+  animation: availablePing 2.4s ease-out infinite;
+}
+
+@keyframes availablePing {
+  0%        { transform: scale(1); opacity: 0.55; }
+  70%, 100% { transform: scale(2.8); opacity: 0; }
 }
 
 .availableText {
@@ -87,6 +145,15 @@
   .main {
     height: auto;
     overflow: visible;
+  }
+
+  /* Contain the glow: .main no longer clips here, and its height is now
+     content-driven (tall), so use a fixed, top-anchored blob instead of % */
+  .main::before {
+    top: 0;
+    right: 0;
+    width: 85%;
+    height: 320px;
   }
 
   .splitLayout {

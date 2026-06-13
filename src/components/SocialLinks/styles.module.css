@@ -25,6 +25,11 @@
   transform: translateY(-2px);
 }
 
+.socialLink:focus-visible {
+  outline: 2px solid var(--portfolio-gold);
+  outline-offset: 3px;
+}
+
 [data-theme='dark'] .socialLink:hover {
   background: var(--portfolio-soft-bg);
   border-color: var(--portfolio-soft-bg);
