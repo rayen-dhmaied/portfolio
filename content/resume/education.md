@@ -9,7 +9,7 @@ sidebar_position: 3
 :::note[Key Highlights]
 
 - **Major**: DevOps and Site Reliability Engineering
-- Top of the class 🏆📚
+- Graduated as valedictorian
 
 <details>
 <summary>View studied subjects</summary>

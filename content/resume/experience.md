@@ -16,16 +16,15 @@ sidebar_position: 2
 <details>
 <summary>View all responsibilities</summary>
 
-- Built AWS infrastructure with Terraform and CloudFormation, including multi-region EKS clusters provisioned in under 10 minutes, IAM, networking, storage, and Kubernetes add-ons.
-- Migrated workloads across AWS accounts and regions with planned cutovers and minimal downtime.
-- Built GitHub Actions pipelines for backend services and mobile apps, covering lint, tests, builds, image publishing, and deploys in under 5 minutes; automated recurring operations with Python and Shell scripts.
-- Shipped a deployment platform with GitHub Actions, Helm, Argo CD, React, and YAML config for 20+ customer apps in 3 AWS regions.
-- Operated production Kubernetes clusters, handled incidents, joined the on-call rotation, and wrote runbooks, SOPs, and postmortem notes.
-- Implemented the observability stack with Prometheus, Loki, Grafana, external HTTPS probes, Istio, Jaeger, and Kiali; reduced MTTR by 50%.
-- Created Grafana dashboards for Kubernetes health, EC2 health, application debugging, ingress traffic, capacity, and alert review.
-- Tuned PostgreSQL clusters to reduce resource usage by 35%, and automated backup and restore for Kubernetes resources and EBS/EFS persistent volumes.
-- Centralized authentication with Keycloak, handled AWS IAM administration, and reduced employee onboarding time by 70%.
-- Built REST APIs in Python and Go for payments, user management, analytics, and a live quiz platform with OpenAI quiz generation, Stripe subscriptions, LTI 1.3 support, and 200+ MAU.
+- Cut AWS spend 45% through FinOps rightsizing, resource cleanup, and usage reviews.
+- Built multi-region AWS infrastructure with Terraform and CloudFormation, provisioning EKS clusters (IAM, networking, storage, Kubernetes add-ons) in under 10 minutes.
+- Implemented CI/CD pipelines for web and mobile apps (lint, test, image build, deploy in under 5 minutes) and automated 70% of recurring operations with Python, shell scripts, and cron.
+- Developed a deployment platform for 20+ customer apps across 3 AWS regions using GitHub Actions, Helm, Argo CD, React, and YAML config.
+- Reduced MTTR 50% by building a full observability stack (Prometheus, Loki, Grafana, Jaeger, Istio/Kiali) with external HTTPS probes and a runbook on every alert.
+- Centralized authentication with Keycloak and administered AWS IAM, cutting employee onboarding time 70%.
+- Tuned PostgreSQL clusters to lower resource use 35% and automated backup/restore for Kubernetes resources and EBS/EFS volumes.
+- Developed and operated backend APIs in Python and Go for payments, user management, analytics, and AI integrations, including a live quiz platform with Stripe subscriptions and LTI 1.3 serving 200+ MAU.
+- Built an auto-scaling, multi-AZ BigBlueButton video platform on AWS; a custom AMI cut instance launch from 11 minutes to 3, with scale-in protection for active meetings.
 
 </details>
 
@@ -44,11 +43,10 @@ sidebar_position: 2
 <details>
 <summary>View all responsibilities</summary>
 
-- Built a NestJS, React, Material UI, Prisma, and PostgreSQL platform for browsing internal business data and debugging production issues.
-- Added role-based access control for admin, developer, and viewer roles.
-- Logged queries and data operations with user and timestamp metadata.
-- Deployed the frontend and backend with Docker on AWS ECS.
-- Configured CloudWatch logs for monitoring and troubleshooting.
+- Built an internal platform (NestJS, React, Prisma, Material UI) that let developers browse and query data for debugging without connecting to the database directly or writing SQL, replacing a paid third-party tool.
+- Exposed 100+ production tables through a role-based web interface.
+- Added an audit trail logging every query and data operation with user and timestamp.
+- Deployed the frontend and backend with Docker on AWS ECS, with logs in CloudWatch.
 
 </details>
 
