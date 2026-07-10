@@ -1,7 +1,8 @@
 ---
 title: Release Helm Charts - GitHub Action
+sidebar_position: 2
 tags: [GitHub Actions, Helm, CI/CD, Bash]
-description: Composite GitHub Action that detects changed Helm charts, lints them, packages them, updates index.yaml, and publishes the chart repo to GitHub Pages.
+description: Composite GitHub Action on the Marketplace that releases Helm charts to GitHub Pages. Detects changed charts, lints, packages, and merges index.yaml without losing old versions.
 ---
 
 [View Source Code on GitHub](https://github.com/rayen-dhmaied/release-helm-charts) →
@@ -20,49 +21,18 @@ The project maps well to DevOps work: release automation, Git branch handling, H
 
 :::tip Key Results
 - Published on the GitHub Marketplace
-- Reusable composite action built with Bash, Helm, Git, and GitHub Actions
-- Processes only changed charts
-- Preserves older chart versions in `index.yaml`
-- Publishes packaged charts to GitHub Pages
+- One reusable release step: detect changed charts, lint, package, publish to GitHub Pages
+- Older chart versions stay installable after each release
+- No-op runs make no commits, so release history stays clean
 :::
 
 ---
 
-## Tech Stack
+## Implementation Highlights
 
-**Automation:** GitHub Actions composite action  
-**Packaging:** Helm  
-**Publishing:** GitHub Pages  
-**Scripting:** Bash, Git
+The action runs one job: check out the source branch and the Pages branch side by side, diff the two trees to find changed charts, then run `helm dependency update`, `helm lint`, and `helm package` on each one before merging the result into `index.yaml` and pushing to the Pages branch.
 
----
-
-## Implementation Setup
-
-### Action Flow
-The action runs a release workflow inside one GitHub Actions job:
-
-1. Check out the source branch.
-2. Check out the GitHub Pages branch into a separate directory.
-3. Compare both trees to detect changed charts.
-4. Run `helm dependency update` for each changed chart.
-5. Run `helm lint`.
-6. Package the chart with `helm package`.
-7. Merge new packages into `index.yaml`.
-8. Commit and push the generated chart repo to the Pages branch.
-
-### Composite Action Structure
-- Bash scripts handle branch paths, chart detection, packaging, and commits
-- Helm commands handle dependency updates, linting, packaging, and index generation
-- Git handles diffing, staged changes, commits, and pushes
-- The action exposes inputs for chart path, source branch, Pages branch, and commit metadata
-
-### Key Implementation Details
-- **Dual checkout:** The workflow checks out the source branch at the workspace root and the Pages branch in a subdirectory.
-- **Change detection:** The action compares the source checkout with the Pages checkout so it packages only modified charts.
-- **Index merge:** `helm repo index --merge` keeps older chart versions installable.
-- **No-op runs:** The commit step skips pushing when the action has no generated changes.
-- **Marketplace packaging:** The repo includes action metadata so other workflows can call it as a reusable action.
+Inputs cover the chart path, source branch, Pages branch, and commit metadata, and the repo ships Marketplace action metadata so other workflows can reuse it.
 
 ---
 
@@ -78,14 +48,3 @@ The action runs a release workflow inside one GitHub Actions job:
 Older chart versions stay installable after new releases.
 :::
 
----
-
-### Challenge 2: Avoiding Empty Commits
-
-**Problem:** A workflow that commits generated artifacts can create noisy history when no chart changed. Empty commits also make it harder to tell which runs produced a real release.
-
-**Solution:** The script checks for staged changes before committing. If Helm packaging and index generation produce no diff, the action exits without pushing.
-
-:::success Result
-Release history only changes when the action publishes chart artifacts.
-:::

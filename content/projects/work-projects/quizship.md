@@ -1,7 +1,8 @@
 ---
 title: QuizShip - Live Interactive Quiz Platform
+sidebar_position: 4
 tags: [Python, Flask, Go, WebSocket, Stripe, OpenAI, LTI, Kubernetes, ArgoCD, Prometheus, Grafana, PostgreSQL, Celery]
-description: Live quiz platform with WebSocket gameplay, Stripe subscriptions, OpenAI quiz generation, LTI launch support, and Kubernetes deployment through Helm and ArgoCD.
+description: Production quiz SaaS built as two services, Go for live WebSocket gameplay and Python for billing and content, with Stripe subscriptions and GitOps deploys on Kubernetes.
 ---
 
 **Live App:** [quizship.craftschoolship.com](https://quizship.craftschoolship.com)  
@@ -22,13 +23,11 @@ I split the platform along that grain. Go owns WebSocket sessions and live game 
 ### Outcome
 
 :::tip Key Results
-- Two-language platform: Go for live gameplay, Python for the product surface
-- Plugin architecture for game types — adding a new game is a single drop-in
-- Stripe subscriptions across three plan tiers with server-side quota and concurrency safeguards
-- OpenAI quiz generation from text prompts
-- LTI 1.3 deep linking for LMS course launches
-- Admin dashboard with live KPIs and historical snapshots
-- Sticky WebSocket routing that scales horizontally without breaking in-flight games
+- Two services in production: Go runs the live game loop, Python owns accounts, billing, content, and admin
+- Stripe subscriptions across three plan tiers, hardened against webhook races and concurrent updates
+- Sticky WebSocket routing scales the game tier horizontally without dropping in-flight games
+- New game types are one drop-in module; the second type shipped without touching the host, play, or dashboard pages
+- OpenAI quiz generation and LTI 1.3 launches from LMS courses
 :::
 
 ---
@@ -37,26 +36,27 @@ I split the platform along that grain. Go owns WebSocket sessions and live game 
 
 ```mermaid
 graph TD
-    A[Users / LMS] --> C[Python Service]
-    A --> D[Go Service]
+    U["Players & Hosts"] -->|REST| PY
+    U -->|WebSocket| GO
 
-    C --> E[(PostgreSQL)]
-    C --> R[(Redis)]
-    C --> F[Stripe]
-    C --> G[OpenAI]
+    subgraph K8S ["Kubernetes"]
+        GO[Go Service<br/>live games] <--> PY[Python Service<br/>product & billing]
+        CW[Celery Workers]
+    end
 
-    D --> R
-    D <--> C
+    GO --> RD[(Redis)]
+    RD --> CW
+    PY --> PG[(PostgreSQL)]
+    CW --> PG
 
-    CB[Celery Beat] --> R
-    R --> CW[Celery Workers]
-    CW --> E
+    PY <--> ST[Stripe]
+    PY --> OAI[OpenAI]
 
-    style C fill:#4CAF50,color:#fff
-    style D fill:#00ADD8,color:#fff
-    style R fill:#DC382D,color:#fff
-    style E fill:#336791,color:#fff
-    style CB fill:#FF7043,color:#fff
+    style PY fill:#4CAF50,color:#fff
+    style GO fill:#00ADD8,color:#fff
+    style RD fill:#DC382D,color:#fff
+    style PG fill:#336791,color:#fff
+    style ST fill:#635BFF,color:#fff
 ```
 
 :::info Architecture Overview
@@ -65,69 +65,13 @@ Flask handles auth, subscriptions, quiz content, OpenAI generation, LTI, admin, 
 
 ---
 
-## Tech Stack
+## Implementation Highlights
 
-**Backend:** Python, Flask, Go, WebSocket  
-**Database:** PostgreSQL, Redis  
-**Task Queue:** Celery, Celery Beat  
-**Integrations:** Stripe, OpenAI, LTI 1.3  
-**Infrastructure:** Kubernetes, Helm, ArgoCD  
-**Monitoring:** Prometheus, Grafana  
-**CI/CD:** Docker, image builds, GitOps deployments
-
----
-
-## Implementation Setup
-
-### Python Service
-- JWT auth with token versioning, so a revocation ends active sessions on the next request
-- Stripe subscriptions with webhook reconciliation as the source of truth
-- Quiz library CRUD with a `kind` discriminator so each game type mounts its own editor and host view
-- OpenAI quiz generation from prompts into structured questions
-- LTI 1.3 provider with deep linking and `kind` threaded into the launch redirect
-- Per-endpoint and per-user rate limits on sensitive routes
-- Admin tools for analytics, moderation, impersonation, and gift subscriptions
-- Celery handoff for billing emails, counter resets, snapshots, and cleanup
-
-### Go WebSocket Service
-- Validates the player's JWT locally with the shared secret before opening the socket
-- Calls Flask to check and increment quota inside one locked transaction before a game starts
-- Holds the live game state machine in memory and snapshots it to Redis, so a pod restart can rehydrate
-- Posts the final session record back to Flask when the game ends
-
-### Stripe Integration
-- Three plan tiers with quotas and feature flags tied to the active subscription
-- Webhook reconciliation against live Stripe state, not the event payload
-- Per-user mutex on update, cancel, and reactivate to prevent double-charge races
-- Webhook event-id deduplication so retried deliveries do not re-run side effects
-- `SubscriptionSchedule` release before any cancellation toggle, so reactivate works after a queued downgrade
-- Token version bump on every entitlement change so stale JWTs stop validating immediately
-- Gift subscriptions for free billing periods without invoices
-
-### LTI Integration
-- LTI 1.3 OIDC launch flow
-- Deep linking from LMS course pages into a selected quiz
-- Resource links that bind quiz payloads to LMS assignments
-
-### Celery Jobs
-- Daily counter reset for free-plan and yearly subscriptions
-- Hourly `analytics_snapshots` upsert powering historical charts
-- Billing lifecycle emails for activation, renewal, payment failure, and cancellation
-- Cleanup for expired sessions and stale records
-
-### Admin Module
-- Live KPI cards (DAU/WAU/MAU, signups, conversion, plan breakdown) cached in Redis
-- Historical charts read from `analytics_snapshots`
-- User search, status filters, detail pages, and moderation actions
-- Short-lived impersonation sessions for support
-- Gift subscription assignment by plan and billing period
-
-### Deployment and Monitoring
-Kubernetes runs the platform. Helm packages the services and ArgoCD syncs them from Git. CI builds Docker images and updates the manifests ArgoCD watches.
-
-The Go deployment scales horizontally with sticky routing — every request for the same game lands on the same pod, while paths without a game id fall back to round-robin. Redis snapshots cover pod restarts.
-
-Prometheus collects metrics. Grafana dashboards track latency, throughput, error rate, uptime, and queue health. Alerts cover availability drops, latency spikes, and stuck background jobs.
+- The Python service owns the product surface: JWT auth with token versioning so a revocation ends active sessions on the next request, per-user rate limits on sensitive routes, OpenAI quiz generation, and admin tools with short-lived impersonation and gift subscriptions.
+- The Go service validates JWTs locally with the shared secret, holds each live game's state machine in memory, snapshots it to Redis so a pod restart can rehydrate, and posts the final session record back to Flask.
+- LTI 1.3 deep linking lets a teacher bind a quiz to an LMS assignment and launch it from the course page.
+- Celery workers handle billing emails, daily quota resets, hourly analytics snapshots, and cleanup, with Redis as the queue and PostgreSQL as the source of truth.
+- Helm packages both services and ArgoCD syncs them from Git. Prometheus and Grafana alert on latency, error rate, uptime, and stuck background jobs.
 
 ---
 
@@ -157,19 +101,7 @@ The game deployment scales horizontally without breaking active sessions. Rollin
 
 ---
 
-### Challenge 3: Quota Overruns Under Concurrent Load
-
-**Problem:** Users have monthly quiz quotas. Two game starts could pass the quota check at the same time and both increment later, leaving the user over quota.
-
-**Solution:** I moved the check and increment into one Flask endpoint that runs `SELECT ... FOR UPDATE` on the subscription row inside a single transaction. PostgreSQL holds the row lock from check to write, so the second concurrent caller waits or fails fast. If the session never confirms, the transaction rolls back the increment.
-
-:::success Result
-Concurrent load tests stopped producing over-quota sessions. Production has not shown quota drift from that path.
-:::
-
----
-
-### Challenge 4: Keeping Stripe and Local State in Sync Under Real Traffic
+### Challenge 3: Keeping Stripe and Local State in Sync Under Real Traffic
 
 **Problem:** Stripe webhooks arrive late, arrive out of order, and redeliver after transient failures. Concurrent user actions (a double-click on upgrade, a reactivate while a downgrade is queued) can race into Stripe and produce divergent state. The first version trusted webhook payloads and ran subscription updates without serialization; both assumptions broke under live traffic.
 

@@ -1,7 +1,8 @@
 ---
 title: Box2Home - Internal Data Platform
+sidebar_position: 4
 tags: [NestJS, React, Material UI, PostgreSQL, AWS, ECS, Docker, TypeScript]
-description: Internal data and debugging platform built during my bachelor internship as a software developer, using NestJS, React, PostgreSQL, Docker, and AWS ECS.
+description: Internal debugging platform that replaced a paid SaaS tool during my internship. 100+ production tables behind role-based read-only access, with a full audit trail.
 ---
 
 [View Frontend Source Code on GitHub](https://github.com/rayen-dhmaied/box2home-frontend) →  
@@ -22,79 +23,21 @@ My internship project replaced the daily-use parts of that tool with an internal
 ### Outcome
 
 :::tip Key Results
-- Replaced the third-party subscription for the core workflow
-- Read-only production database access controlled by roles
-- Audit trail for queries and data operations, tied to the user
-- React UI shaped around the team's debugging tasks
-- Dockerized NestJS and React services deployed on AWS ECS
+- Replaced the paid third-party tool for the team's daily debugging workflow
+- 100+ production tables exposed through a role-based, read-only interface
+- Each query and data operation logged with user and timestamp
+- NestJS and React services on AWS ECS with Docker
 :::
 
 ---
 
-## Tech Stack
+## Implementation Highlights
 
-**Backend:** NestJS, TypeScript, Prisma, PostgreSQL  
-**Frontend:** React, Material UI  
-**Deployment:** Docker, AWS ECS, CloudWatch Logs  
-**Authentication:** JWT, role-based access control
-
----
-
-## Implementation Setup
-
-### Backend
-I built a modular NestJS backend with separate modules for auth, users, data access, and audit logs.
-
-**Auth:**
-- JWT login and refresh
-- Role-based access for admin, developer, and viewer roles
-- Guards on protected endpoints
-
-**User Management:**
-- Account CRUD
-- Role assignment
-- Activity tracking
-
-**Data Access:**
-- Controller, service, and repository layers per data area
-- Prisma for database access
-- Read-only connection to the production database
-- Input validation before query execution
-- Pagination on list endpoints
-
-**Audit and Operation Logs:**
-- Logs each query with user, timestamp, target entity, and filters
-- Logs data operations performed through the platform
-- Stores audit records in a separate database from the production read target
-- Exposes a searchable audit log in the UI
-
-**Databases:**
-- PostgreSQL for the platform's own state
-- Read-only PostgreSQL connection to production data
-- Separate logging database for audit records
-
-### Frontend
-I built a React and Material UI frontend around the workflows developers used during debugging.
-
-- Data explorer for browsing tables and records
-- Query builder with filters
-- Results view with pagination, sorting, and export
-- Admin screens for users and roles
-- Audit log viewer with filters and search
-- JWT login flow and session handling
-
-### Deployment
-
-**Containers:**
-- Multi-stage Dockerfile for the NestJS backend
-- Multi-stage Dockerfile for the React production build
-- Runtime config passed through environment variables
-
-**AWS ECS:**
-- Backend deployed on ECS Fargate
-- Frontend deployed as a containerized web app
-- Load balancer in front of the services
-- CloudWatch Logs for application output
+- Modular NestJS backend with auth, users, data access, and audit modules. JWT login with role guards on each protected endpoint.
+- Three database connections with different jobs: the platform's own PostgreSQL state, a read-only connection to production data, and a separate database for audit records.
+- The audit module logs each query and data operation with the user, timestamp, target entity, and filters, searchable from the UI.
+- React and Material UI screens follow the debugging workflow: data explorer, query builder with filters, paginated results with export, admin screens, and the audit viewer.
+- Both services ship as multi-stage Docker builds on AWS ECS Fargate behind a load balancer, with logs in CloudWatch.
 
 ---
 
@@ -122,14 +65,3 @@ The team moved the core workflow to the internal platform and cancelled the thir
 Developers could inspect production data without direct write access, and each read had an audit trail.
 :::
 
----
-
-### Challenge 3: Query Performance on Large Tables
-
-**Problem:** Some production tables held millions of rows. A naive table browser would run slow queries and render too much data in the browser.
-
-**Solution:** I added pagination and explicit limits on list endpoints, indexed the columns used by the common filters, and used paginated tables in the React UI. Repeated queries could use a short-lived cache before hitting the database again.
-
-:::success Result
-Data screens stayed usable on large tables, and the UI did not freeze on big result sets.
-:::

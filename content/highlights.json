@@ -18,16 +18,16 @@
    ],
    "keyNumbers":[
         {
-            "label": "Years of Experience",
-            "value": "3+"
+            "label": "AWS Cost Reduction",
+            "value": "45%"
         },
         {
-            "label": "Cloud Certifications",
-            "value": "4"
+            "label": "MTTR Reduction",
+            "value": "50%"
         },
         {
-            "label": "Projects Delivered",
-            "value": "5+"
+            "label": "Customer Apps in Production",
+            "value": "20+"
         }
    ]
 }

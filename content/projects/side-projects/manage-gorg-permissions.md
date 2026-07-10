@@ -1,7 +1,8 @@
 ---
 title: Manage GitHub Org Permissions - GitHub Action
+sidebar_position: 1
 tags: [Python, PyGithub, GitHub Actions, GitHub App, GitHub API, IaC, YAML]
-description: GitHub Action that syncs organization teams, repository permissions, and collaborators from YAML using a GitHub App and short-lived installation tokens.
+description: GitHub Action on the Marketplace that puts org access changes behind pull requests. Teams, repo permissions, and collaborators sync from one YAML file, authenticated as a GitHub App.
 ---
 
 [View Source Code on GitHub](https://github.com/rayen-dhmaied/manage-gorg-permissions) →
@@ -21,12 +22,11 @@ I built this so access changes go through pull requests. The YAML file holds the
 ### Outcome
 
 :::tip Key Results
-- One YAML file defines managed teams, repo permissions, and direct collaborators
-- GitHub App auth avoids long-lived personal access tokens
-- Short-lived installation tokens scope each run to the App installation
-- `gorg.md` report records the applied state after each sync
-- Incremental adoption: unmanaged teams and repos stay untouched
 - Published on the GitHub Marketplace
+- Access changes go through pull requests: one YAML file holds teams, repo permissions, and collaborators
+- GitHub App auth with short-lived installation tokens instead of a personal access token
+- Manages only what the YAML names, so an org can adopt it one repo at a time
+- A committed report records the applied state after each sync
 :::
 
 A `gorg.yaml` looks like:
@@ -51,42 +51,16 @@ The repo README covers setup, inputs, and the behavior matrix.
 
 ---
 
-## Tech Stack
+## Implementation Highlights
 
-**Runtime:** Python, PyGithub  
-**Automation:** GitHub Actions  
-**Auth:** GitHub App, installation access tokens  
-**API:** GitHub REST API  
-**Config:** YAML
+The action runs in three phases. `load_config` validates `gorg.yaml` before any API call and rejects unknown permission values. `Auth.AppInstallationAuth` exchanges the App credentials for a short-lived installation token. The reconciler then compares current and desired state for each managed team and repository and applies the difference. One guard blocks the action from managing the repository that runs it, so a bad config cannot strip the action's own access.
 
----
-
-## Implementation Notes
-
-The action runs in three phases.
-
-### 1. Load and Validate
-`load_config` parses `gorg.yaml` before any GitHub API call. It rejects unknown permission values, malformed YAML, and unsafe config.
-
-One guard blocks the action from managing the repository that runs it. That prevents a bad config from stripping the action's own access and breaking future syncs.
-
-### 2. Authenticate as a GitHub App
-The workflow passes the App ID, private key, and installation ID into the action. `Auth.AppInstallationAuth` exchanges them for a short-lived installation access token at runtime.
-
-The private key input accepts either a path to a `.pem` file or inline key content with `\n` escapes, which makes the action easier to run in different CI setups.
-
-### 3. Reconcile Permissions
-For each managed team, the action compares current and desired maintainers and members, then applies the changes. For each managed repository, it reconciles team permissions and direct collaborators.
-
-If the GitHub API rate limit stops the run mid-sync, the action still writes the report and exits non-zero so the workflow fails visibly.
-
-### Design Decisions
-
-- **Direct collaborators only:** The action lists repo collaborators with `affiliation='direct'`. Without that filter, GitHub also returns users who inherit access through teams, and the sync would fight itself.
-- **Missing resources:** A missing team or repo named in YAML logs a warning and the run continues. Other API errors fail the sync.
-- **Tolerant optional fields:** A `_coerce` helper treats missing optional fields as empty lists, so `members:` and no `members` key behave the same.
-- **Report commits:** The workflow commits `gorg.md` only when the generated report changes.
-- **Concurrency:** A `gorg-sync` concurrency group prevents two pushes from reconciling the org at the same time.
+Design decisions:
+- **Direct collaborators only:** the sync lists repo collaborators with `affiliation='direct'`. Without that filter, GitHub also returns team-inherited users and the sync would fight itself.
+- **Missing resources:** a missing team or repo named in YAML logs a warning and the run continues. Other API errors fail the sync.
+- **Tolerant optional fields:** a `_coerce` helper treats missing optional fields as empty lists, so `members:` and no `members` key behave the same.
+- **Rate limits:** if the GitHub API rate limit stops a run mid-sync, the action still writes the report and exits non-zero so the workflow fails visibly.
+- **Loop safety:** the workflow trigger watches `gorg.yaml`, not the generated report, and a concurrency group stops overlapping syncs.
 
 ---
 
@@ -114,14 +88,3 @@ The workflow runs without a long-lived user token, and GitHub audit logs attribu
 Users can start with one team or repository and expand coverage over time.
 :::
 
----
-
-### Challenge 3: Generated Reports Without Workflow Loops
-
-**Problem:** The action commits `gorg.md` after a sync. If that commit triggers the workflow again, the action can enter a commit loop and burn API rate limit.
-
-**Solution:** The workflow trigger watches `gorg.yaml`, not `gorg.md`. The commit step checks for staged changes before pushing, and the workflow uses the `gorg-sync` concurrency group to avoid overlapping syncs.
-
-:::success Result
-The report stays current without retriggering the workflow.
-:::
