@@ -36,4 +36,10 @@ export const Cert = ({img, title, url}) => (
   url="https://www.credly.com/badges/730b0d05-54f4-4167-81a0-9f2da284c7ee"
 />
 
+<Cert 
+  img={require('./images/certifications/gcp-genai-leader.png').default}
+  title="Google Cloud Certified Generative AI Leader"
+  url="https://www.credly.com/badges/82c99936-1ce4-496c-b6a7-777f4a7df0e0"
+/>
+
 </div>
