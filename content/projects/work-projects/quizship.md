@@ -5,8 +5,8 @@ tags: [Python, Flask, Go, WebSocket, Stripe, OpenAI, LTI, Kubernetes, ArgoCD, Pr
 description: Production quiz SaaS built as two services, Go for live WebSocket gameplay and Python for billing and content, with Stripe subscriptions and GitOps deploys on Kubernetes.
 ---
 
-**Live App:** [quizship.craftschoolship.com](https://quizship.craftschoolship.com)  
-**API Docs:** [api.quizship.craftschoolship.com/store/docs](https://api.quizship.craftschoolship.com/store/docs)
+**Live App:** [quizship.com](https://quizship.com)  
+**API Docs:** [api.quizship.com/store/docs](https://api.quizship.com/store/docs)
 
 ## Overview
 
