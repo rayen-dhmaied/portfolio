@@ -1,8 +1,8 @@
 ---
 title: QuizShip - Live Interactive Quiz Platform
 sidebar_position: 4
-tags: [Python, Flask, Go, WebSocket, Stripe, OpenAI, LTI, Kubernetes, ArgoCD, Prometheus, Grafana, PostgreSQL, Celery]
-description: Production quiz SaaS built as two services, Go for live WebSocket gameplay and Python for billing and content, with Stripe subscriptions and GitOps deploys on Kubernetes.
+tags: [Python, Flask, Go, WebSocket, Stripe, Claude, LTI, Kubernetes, ArgoCD, Prometheus, Grafana, PostgreSQL, Redis, Celery]
+description: Production quiz SaaS built as two services, Go for live WebSocket gameplay and Python for billing, content, and AI generation, with Stripe subscriptions and GitOps deploys on Kubernetes.
 ---
 
 **Live App:** [quizship.com](https://quizship.com)  
@@ -11,23 +11,23 @@ description: Production quiz SaaS built as two services, Go for live WebSocket g
 ## Overview
 
 ### What it is
-A live multiplayer quiz platform. Hosts create quizzes, players join through WebSocket, and the game server handles answers, scores, and session state in real time.
+A live multiplayer quiz platform. Hosts build a quiz in one of several game formats or generate one with Claude, players join through WebSocket, and the game server handles answers, scores, and session state in real time.
 
-I built both services. Go runs the live game loop. Python owns accounts, billing, quotas, the quiz library, AI generation, LTI integration, admin tools, and async jobs.
+I built both services. Go runs the live game loop. Python owns accounts, billing, quotas, the quiz library, AI generation, LTI integration, admin tools, analytics, and async jobs.
 
 ### Why it exists
-A single language for the whole platform would have forced a tradeoff. Python's ecosystem made the product side fast to build, but its WebSocket and concurrency story is weaker. Go's goroutines fit live sessions, but rebuilding Flask, SQLAlchemy, and the Stripe SDK ergonomics in Go would have cost months for no end-user gain.
+A single language would have forced a tradeoff. Python's ecosystem made the product side fast to build, but its WebSocket and concurrency story is weaker. Go's goroutines fit live sessions, but rebuilding Flask, SQLAlchemy, and the Stripe SDK ergonomics in Go would have cost months for no end-user gain.
 
-I split the platform along that grain. Go owns WebSocket sessions and live game state. Python owns the product surface. The two services share a JWT secret for local token validation and Redis for live state.
+So I split the platform along that grain: Go for live sessions, Python for the product. The services share a JWT secret, so Go validates tokens without a network call, and Go calls Flask only where Flask holds the truth: the plan check when a game starts and the result when it ends.
 
 ### Outcome
 
 :::tip Key Results
-- Two services in production: Go runs the live game loop, Python owns accounts, billing, content, and admin
-- Stripe subscriptions across three plan tiers, hardened against webhook races and concurrent updates
+- Tiered Stripe subscriptions with a metered AI quota, hardened against webhook races, concurrent updates, refunds, and disputes
 - Sticky WebSocket routing scales the game tier horizontally without dropping in-flight games
-- New game types are one drop-in module; the second type shipped without touching the host, play, or dashboard pages
-- OpenAI quiz generation and LTI 1.3 launches from LMS courses
+- New game formats ship as drop-in modules on the Go server and the frontend
+- Claude quiz generation from a prompt or a PDF, and LTI 1.3 launches from LMS courses
+- About 1,750 store tests and a race-checked Go suite gate every image build
 :::
 
 ---
@@ -35,43 +35,47 @@ I split the platform along that grain. Go owns WebSocket sessions and live game 
 ## Architecture
 
 ```mermaid
-graph TD
-    U["Players & Hosts"] -->|REST| PY
-    U -->|WebSocket| GO
+flowchart TB
+    LMS["LMS Courses"]
+    U["Players & Hosts"]
 
     subgraph K8S ["Kubernetes"]
-        GO[Go Service<br/>live games] <--> PY[Python Service<br/>product & billing]
-        CW[Celery Workers]
+        PY["Python Service<br/>API + Celery workers"]
+        GO["Go Service<br/>live games"]
     end
 
-    GO --> RD[(Redis)]
-    RD --> CW
-    PY --> PG[(PostgreSQL)]
-    CW --> PG
+    LMS --->|LTI 1.3| PY
+    U -->|REST| PY
+    U -->|WebSocket| GO
+    GO <-->|plan check, results| PY
 
+    PY --> PG[(PostgreSQL)]
     PY <--> ST[Stripe]
-    PY --> OAI[OpenAI]
+    PY --> CL[Claude API]
+    PY --> RD[(Redis)]
+    GO ---> RD
 
     style PY fill:#4CAF50,color:#fff
     style GO fill:#00ADD8,color:#fff
     style RD fill:#DC382D,color:#fff
     style PG fill:#336791,color:#fff
     style ST fill:#635BFF,color:#fff
+    style CL fill:#D97757,color:#fff
 ```
 
 :::info Architecture Overview
-Flask handles auth, subscriptions, quiz content, OpenAI generation, LTI, admin, and webhooks. Go runs WebSocket sessions, validates JWTs locally with the shared secret, stores live state in Redis, and calls Flask only when it needs the source of truth (quota check, session result write-back). Celery workers use Redis as the queue and PostgreSQL as the source of truth for async jobs.
+Flask handles auth, billing, content, AI generation, LTI, admin, and webhooks, with Redis for caching, rate limits, and locks. Go runs the live games, keeps their state in Redis, and calls Flask for the plan check at creation and the result at the end. Celery workers take jobs from Redis and write to PostgreSQL.
 :::
 
 ---
 
 ## Implementation Highlights
 
-- The Python service owns the product surface: JWT auth with token versioning so a revocation ends active sessions on the next request, per-user rate limits on sensitive routes, OpenAI quiz generation, and admin tools with short-lived impersonation and gift subscriptions.
-- The Go service validates JWTs locally with the shared secret, holds each live game's state machine in memory, snapshots it to Redis so a pod restart can rehydrate, and posts the final session record back to Flask.
-- LTI 1.3 deep linking lets a teacher bind a quiz to an LMS assignment and launch it from the course page.
-- Celery workers handle billing emails, daily quota resets, hourly analytics snapshots, and cleanup, with Redis as the queue and PostgreSQL as the source of truth.
-- Helm packages both services and ArgoCD syncs them from Git. Prometheus and Grafana alert on latency, error rate, uptime, and stuck background jobs.
+- Each live game is an actor: one goroutine owns its state and drains a mailbox of player events, so game code needs no locks. A panic rolls that game back to its last Redis snapshot instead of crashing the pod, and WebSocket heartbeats every 10 seconds drop dead connections so abandoned games get cleaned up.
+- Finished games reach the Python service through a Redis outbox with exponential backoff, leased claims so two pods never post the same result, and a dead-letter set for entries that run out of retries. A store outage delays results instead of losing them. Plans stay cached with a 7-day stale fallback, so a Stripe outage doesn't block feature checks either.
+- Every payment, refund, and dispute lands in a ledger that feeds MRR, ARPU, the paid churn rate, and MRR movements split into new, expansion, contraction, and churn. Each AI generation records its tokens and cost, and the admin view puts AI spend per account next to the plan's price, which shows each tier's margin.
+- LTI 1.3 launches verify the LMS's signed ID token against its JWKS, fetched only from public HTTPS hosts to block SSRF, and the editor token travels in the URL fragment so it never reaches server logs. Sessions are revocable on the next request, and auth, billing, and AI routes are rate limited.
+- Helm packages both services and the Celery workers, and ArgoCD syncs them from Git. CI gates each image on its test suite, the Go one under the race detector. Prometheus and Grafana alert on latency, error rate, uptime, and stuck background jobs.
 
 ---
 
@@ -79,21 +83,21 @@ Flask handles auth, subscriptions, quiz content, OpenAI generation, LTI, admin, 
 
 ### Challenge 1: Adding New Game Types Without Rewriting Every Page
 
-**Problem:** The first version assumed one game type. Adding a second would have meant if/else branches across the authoring page, the host watcher, the player view, the LTI flow, and the dashboard. Every new game would have multiplied that branching.
+**Problem:** The first version assumed one game type. A second would have meant if/else branches across the authoring page, the host watcher, the player view, the LTI flow, and the dashboard, multiplied by every game after it.
 
-**Solution:** I lifted every per-game concern behind a contract interface and a registry keyed by `kind`. Authoring, hosting, and playing each have their own sub-contract. The pages read from the registry instead of switching on string literals. For LMS launches that arrive without an explicit `kind`, the frontend infers it by asking each registered contract whether it recognizes the payload shape.
+**Solution:** I moved every per-game concern behind a contract interface and a registry keyed by `kind`, with sub-contracts for authoring, hosting, and playing. Pages read from the registry instead of switching on string literals. For LMS launches without an explicit `kind`, the frontend asks each registered contract whether it recognizes the payload. The Go server does the same with a `game.Type` interface, so room, snapshot, and result code never branch on `kind`.
 
 :::success Result
-Adding a new game is a single drop-in: one directory, one contract export, one registration. Crossword shipped as the second type without touching the host, play, or dashboard pages.
+A new game is one directory, one contract, and one registration on each side. The second format shipped without touching the host, play, or dashboard pages, and later formats followed the same path.
 :::
 
 ---
 
 ### Challenge 2: Scaling a Stateful WebSocket Server Behind a Stateless Ingress
 
-**Problem:** Each live game's state machine lives in memory on a single Go pod. HTTP and WebSocket traffic for that game must land on the same pod, or it hits a cold pod with no record of the session. Round-robin balancing would break in-flight games as soon as the deployment scaled past one replica.
+**Problem:** Each live game's state lives in memory on one Go pod, so all of its HTTP and WebSocket traffic must reach that pod. Round-robin balancing would break in-flight games as soon as the deployment scaled past one replica.
 
-**Solution:** I configured the nginx ingress to hash by a regex on the request URI that captures `game_id` from the path. Same game, same pod. Paths without a game id fall back to round-robin. The Go service rehydrates from a Redis snapshot when it gets a request for a game it does not yet hold in memory, so a pod restart loses no session state.
+**Solution:** The nginx ingress hashes on the `game_id` a regex captures from the request path, so the same game always reaches the same pod. Other paths fall back to round-robin. A pod that gets a game it doesn't hold rehydrates it from the Redis snapshot. On shutdown, a pod closes its sockets with code 1001; clients reconnect, and the new owner restores the snapshot and reschedules running timers.
 
 :::success Result
 The game deployment scales horizontally without breaking active sessions. Rolling deploys do not drop live games.
@@ -103,14 +107,26 @@ The game deployment scales horizontally without breaking active sessions. Rollin
 
 ### Challenge 3: Keeping Stripe and Local State in Sync Under Real Traffic
 
-**Problem:** Stripe webhooks arrive late, arrive out of order, and redeliver after transient failures. Concurrent user actions (a double-click on upgrade, a reactivate while a downgrade is queued) can race into Stripe and produce divergent state. The first version trusted webhook payloads and ran subscription updates without serialization; both assumptions broke under live traffic.
+**Problem:** Stripe webhooks arrive late, out of order, and again after transient failures. Concurrent user actions (a double-click on upgrade, a reactivate while a downgrade is queued) can race into Stripe. The first version trusted webhook payloads and didn't serialize updates, and both assumptions broke under live traffic. Mid-period plan changes caused more bugs: a last-day upgrade handed out a full month of AI quota, and a refund left the paid plan running.
 
-**Solution:** I rebuilt the flow around three rules.
-- Reconciliation reads from Stripe, not the event. Every webhook handler refetches the subscription with expanded product data and writes local state from that response.
-- A per-user Redis mutex serializes update, cancel, and reactivate, so a double-click cannot race two Stripe modify calls.
-- Webhook event-id deduplication, idempotency keys on checkout creation, and a defensive schedule release before any cancellation toggle cover the rest of the edge cases.
+**Solution:** I rebuilt the flow around four rules.
+- Handlers refetch the subscription from Stripe and write local state from that response, not from the event. A failing handler answers 500 so Stripe retries, and an event-id marker stops a retry from applying twice.
+- A per-user Redis mutex and a Postgres row lock serialize update, cancel, and reactivate.
+- Each customer holds one live subscription: the store refuses a second checkout, expires stale sessions, and cancels duplicates.
+- Upgrades invoice the prorated difference at once and grant only the remaining share of the new AI quota. Downgrades wait for period end on a subscription schedule. A dispute or a full refund of the current period ends the paid plan.
 
 :::success Result
-Subscription state corrects itself on the next Stripe event for the affected customer. None of the original race conditions has recurred in production since rollout.
+Subscription state corrects itself on the next Stripe event for that customer. I verified each billing path end to end with Stripe test clocks, and none of the original races has recurred in production.
 :::
 
+---
+
+### Challenge 4: Getting Playable Quizzes Out of a Language Model
+
+**Problem:** Each format has its own JSON shape and rules: answer counts, fields that must agree, and values that must stay hidden from players. A reply can pass a JSON schema and still be unplayable, or padded with placeholder text.
+
+**Solution:** Generation runs on Claude with structured output bound to each format's schema, so every reply parses. A per-format validator checks the rules a schema can't express and catches placeholder text. On a failure, the service sends Claude the exact problems for one repair round if the time budget allows. Input is a prompt or a PDF, and the shared system prompt is cached.
+
+:::success Result
+A draft that fails the repair round returns an error and costs the host no quota, while its token cost still counts toward the plan's margin.
+:::
