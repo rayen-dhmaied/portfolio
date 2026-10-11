@@ -154,14 +154,8 @@ h4, h5, h6 { font-size: 1rem; }
   border-radius: 5px;
 }
 
-/* The synthwave84 theme draws comments at 2.4:1; lift them to the muted text color */
-.theme-code-block .token.comment {
-  color: var(--c-ink-3) !important;
-  text-shadow: none !important;
-}
-
+/* Token colors come from src/prism-theme.ts */
 .theme-code-block {
-  --prism-background-color: #130f1b !important;
   border: 1px solid var(--c-border);
   border-radius: 8px;
   box-shadow: none;

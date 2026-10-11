@@ -1,8 +1,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import {themes as prismThemes} from 'prism-react-renderer';
 import type {Config, Plugin} from '@docusaurus/types';
 import type * as Preset from '@docusaurus/preset-classic';
+import codeTheme from './src/prism-theme';
 
 // Brand and UI glyphs, also read by the (local) diagram generator
 const ICONS = JSON.parse(fs.readFileSync(path.join(__dirname, 'src/data/icons.json'), 'utf8'));
@@ -165,8 +165,10 @@ const config: Config = {
       copyright: `Copyright © ${new Date().getFullYear()} Built by Rayen Dhmaied.`,
     },
     prism: {
-      theme: prismThemes.synthwave84,
-      darkTheme: prismThemes.synthwave84,
+      theme: codeTheme,
+      darkTheme: codeTheme,
+      // Not in the default Prism bundle (promql has no Prism grammar and stays plain)
+      additionalLanguages: ['bash', 'docker', 'hcl'],
     },
   } satisfies Preset.ThemeConfig,
 };
