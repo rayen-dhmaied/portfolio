@@ -48,7 +48,7 @@ The Git path still exists for batch work, and the dashboard handles one-off depl
 ### Architecture Diagram
 
 <figure className="diagram">
-  <Architecture role="img" />
+  <Architecture />
 </figure>
 
 ### Deploy Flow

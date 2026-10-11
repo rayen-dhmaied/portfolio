@@ -36,7 +36,7 @@ The platform needed more capacity without breaking live meetings during scale-in
 ### High-Level Flow
 
 <figure className="diagram">
-  <Architecture role="img" />
+  <Architecture />
 </figure>
 
 :::info[Key Components]

@@ -37,7 +37,7 @@ A load test starts with questions, and the system's architecture suggests them: 
 QuizShip runs on a Kubernetes cluster on AWS (EKS). Each service is a Kubernetes Deployment: Kubernetes keeps a set number of identical pods running, and each pod is one running copy of the service.
 
 <figure className="diagram">
-  <K6Architecture role="img" />
+  <K6Architecture />
 </figure>
 
 - **ingress-nginx** receives all traffic from outside the cluster. Paths under `/game` go to the game pods and paths under `/store` go to the API pods.
@@ -50,7 +50,7 @@ The game servers call the API twice per game: to check the teacher's plan when a
 API requests are stateless, so the ingress sends them to the API pods in turn. Game traffic has to be sticky instead. A live game lives in the memory of one game pod, so every player of that game has to reach that pod. The ingress takes the game id from the URL with a regex, hashes it and maps the hash to a pod, so each game stays on one pod while different games spread across the pods:
 
 <figure className="diagram">
-  <StickyRouting role="img" />
+  <StickyRouting />
 </figure>
 
 Each game pod also saves its games to Redis. If a pod restarts, its players reconnect to another pod, which restores the game from Redis.
@@ -199,7 +199,7 @@ The test teachers had 25 quizzes each and between 70 and 190 played games left b
 - No production secrets, and Stripe in test mode.
 
 <figure className="diagram">
-  <TestEnvironment role="img" />
+  <TestEnvironment />
 </figure>
 
 Each service had a node to itself, while production shares nodes with other workloads, so these numbers are a best case. The cloud load balancer in front of production wasn't in the path, and neither was the internet between a phone and AWS, so every latency in this post is measured inside the cluster.
@@ -258,13 +258,13 @@ spec:
 The first ramp went after questions 1 and 2 with production's routing. I ramped from 320 classes to 960, which is 10,000 to 30,000 players.
 
 <ChartFigure table={tables['fanout-old-routing']}>
-  <FanoutOldRouting role="img" />
+  <FanoutOldRouting />
 </ChartFigure>
 
 Fan-out was 7 ms at p95 with 10,000 players and 21 ms with 15,000. After that it climbed to 90 ms at 20,000 players and 458 ms at 30,000, just under the threshold. A curve that bends like that usually means a resource is running out, but the busiest node was only at 69% CPU. So I split the CPU graph by pod:
 
 <ChartFigure table={tables['cpu-per-game-pod']}>
-  <CpuPerGamePod role="img" />
+  <CpuPerGamePod />
 </ChartFigure>
 
 Pod A was doing all the work and pod B sat idle, which answered question 1: the load balancing wasn't spreading the games at all. The regex expected a path like `/watch/<id>`, but it ran before the ingress stripped the `/game` prefix, so it saw `/game/watch/<id>` and never matched. Every request got an empty hash key, and an empty key always lands on the same pod.
@@ -297,7 +297,7 @@ The 172 ms came from my test setup, not the servers. Every time a host clicked "
 I removed the limit, so the k6 pods could use the idle CPU on their nodes, and ran both routings again:
 
 <ChartFigure table={tables['routing-and-k6-2x2']}>
-  <RoutingAndK6 role="img" />
+  <RoutingAndK6 />
 </ChartFigure>
 
 Each pair of lines differs in one setting. The gap between the dashed and solid lines is what the k6 limit added, and the gap between the two colors is the routing fix. With the old routing, the rerun had test 1's shape a little lower, 64 ms at 20,000 players and 413 ms at 30,000, so test 1's conclusion held. With the routing fixed and k6 unlimited, 30,000 players got the next question in 13 ms at p95, measured inside the cluster, and each game pod used 1.3 to 1.4 of its 4 cores. That answered question 2 as far as the test environment could go: 30,000 players was the most it could generate, so I still don't know where the game servers' limit is.
@@ -316,7 +316,7 @@ sum by (pod) (rate(container_cpu_cfs_throttled_periods_total{namespace="loadtest
 Question 3 is about a single big game, so I ran single games of 100, 250 and 500 players, each with players joining over 60 seconds and 20 questions. Latency was fine: the last of 500 players got each question within about 30 ms. The problem was the amount of data sent to the players:
 
 <ChartFigure table={tables['bytes-per-game']}>
-  <BytesPerGame role="img" />
+  <BytesPerGame />
 </ChartFigure>
 
 Going from 250 to 500 players multiplied the data by 7. On log-log axes the growth exponent came out between 2.6 and 2.8, nearly cubic, which pointed to something being sent to every player over and over, with a size that grew with the room.
@@ -334,7 +334,7 @@ Question 4 is about 9:00 at a school, so in this test each class created its gam
 The 240 classes, 7,200 players in total, joined with a p95 of 18 ms, and server CPU barely moved. The single-IP run showed a different problem. Game creation is limited to 20 games a minute per IP address, and teachers at the same school usually share one public IP. 18 of the 50 teachers waited more than a second for their game, and the last one waited 53 seconds:
 
 <ChartFigure table={tables['create-wait-one-ip']}>
-  <CreateWaitOneIp role="img" />
+  <CreateWaitOneIp />
 </ChartFigure>
 
 The servers had capacity to spare. The wait came from a rule meant to block abuse, and keyed by IP address it treats a whole school as one user. Keying the limit by the logged-in teacher would fix it.
@@ -346,7 +346,7 @@ The servers had capacity to spare. The wait came from a rule meant to block abus
 Question 5 is about the API, so I ran the API test, raising the arrival rate from 25 to 600 requests a second. Each time I fixed what limited the API, the ceiling moved:
 
 <ChartFigure table={tables['api-ceiling-steps']}>
-  <ApiCeilingSteps role="img" />
+  <ApiCeilingSteps />
 </ChartFigure>
 
 At first the API topped out around 230 requests a second. PostgreSQL was stuck at its 0.5-core CPU limit while its node was 76% idle, so I raised the limit to 1 core. The ceiling moved to about 340, where the API pods' own CPU became the limit.
@@ -371,7 +371,7 @@ So I moved the dashboard's counting into SQL. That cut the API's CPU per request
 The second half of question 5 had the worse answer. Every run that went past the ceiling collapsed instead of slowing down. This one had PostgreSQL at 1 core, so its ceiling was about 340 requests a second:
 
 <ChartFigure table={tables['overload-timeline']}>
-  <OverloadTimeline role="img" />
+  <OverloadTimeline />
 </ChartFigure>
 
 At 400 requests a second, completed requests flattened around 300, and the p95 of the requests that did get answered went from 50 ms to 10 to 20 seconds. Each API pod handles 32 requests at a time (4 gunicorn workers with 8 threads each) and queues the rest. The Kubernetes liveness probe waited in that same queue with a 1-second timeout, so Kubernetes concluded the pods were dead and restarted them, 13 times in ten minutes. Each restart dropped the requests that pod was handling and pushed its traffic onto the other pod.

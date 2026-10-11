@@ -36,7 +36,7 @@ I wanted one dashboard, one alert path, and one external check that sees what cu
 ### Alerting Flow
 
 <figure className="diagram">
-  <AlertingFlow role="img" />
+  <AlertingFlow />
 </figure>
 
 :::info[Alert Flow]

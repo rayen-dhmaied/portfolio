@@ -38,7 +38,7 @@ So I split the platform along that grain: Go for live sessions, Python for the p
 ## Architecture
 
 <figure className="diagram">
-  <Architecture role="img" />
+  <Architecture />
 </figure>
 
 :::info[Architecture Overview]

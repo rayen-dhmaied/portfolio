@@ -37,7 +37,7 @@ We shipped it as a managed SaaS on serverless components: nothing for a single-p
 ## Architecture
 
 <figure className="diagram">
-  <Architecture role="img" />
+  <Architecture />
 </figure>
 
 :::info[Architecture Overview]

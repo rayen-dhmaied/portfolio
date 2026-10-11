@@ -37,7 +37,7 @@ The workshop gave me room to apply the parts I care about as a cloud and DevOps 
 ### High-Level Flow
 
 <figure className="diagram">
-  <Architecture role="img" />
+  <Architecture />
 </figure>
 
 :::info[Key Components]
