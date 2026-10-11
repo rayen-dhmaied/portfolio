@@ -22,7 +22,7 @@ My internship project replaced the daily-use parts of that tool with an internal
 
 ### Outcome
 
-:::tip Key Results
+:::tip[Key Results]
 - Replaced the paid third-party tool for the team's daily debugging workflow
 - 100+ production tables exposed through a role-based, read-only interface
 - Each query and data operation logged with user and timestamp
@@ -49,7 +49,7 @@ My internship project replaced the daily-use parts of that tool with an internal
 
 **Solution:** I reviewed the workflow with the developers who used the tool and focused on the screens they opened during daily debugging: login, data browsing, query filters, audit logs, and user management. I left low-use features out of the first version.
 
-:::success Result
+:::success[Result]
 The team moved the core workflow to the internal platform and cancelled the third-party subscription.
 :::
 
@@ -61,7 +61,7 @@ The team moved the core workflow to the internal platform and cancelled the thir
 
 **Solution:** I used a read-only database user for production access. The backend enforced roles on each endpoint, and the audit module logged every query with the user and timestamp. The platform stored audit records outside the production read target.
 
-:::success Result
+:::success[Result]
 Developers could inspect production data without direct write access, and each read had an audit trail.
 :::
 

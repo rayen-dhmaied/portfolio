@@ -19,7 +19,7 @@ The project maps well to DevOps work: release automation, Git branch handling, H
 
 ### Outcome
 
-:::tip Key Results
+:::tip[Key Results]
 - Published on the GitHub Marketplace
 - One reusable release step: detect changed charts, lint, package, publish to GitHub Pages
 - Older chart versions stay installable after each release
@@ -44,7 +44,7 @@ Inputs cover the chart path, source branch, Pages branch, and commit metadata, a
 
 **Solution:** The action keeps the existing `index.yaml` from the Pages branch and passes it to `helm repo index --merge`. Helm adds new packages while preserving existing entries.
 
-:::success Result
+:::success[Result]
 Older chart versions stay installable after new releases.
 :::
 

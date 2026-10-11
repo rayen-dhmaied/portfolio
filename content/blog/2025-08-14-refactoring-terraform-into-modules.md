@@ -21,7 +21,7 @@ It worked. It was also hard to change. Adding one add-on meant scrolling through
 
 I wanted modules, but I did not want Terraform to recreate a live VPC with an EKS cluster attached to it. The refactor had to move code and state together.
 
-<!-- truncate -->
+{/* truncate */}
 ---
 
 ## The Risk

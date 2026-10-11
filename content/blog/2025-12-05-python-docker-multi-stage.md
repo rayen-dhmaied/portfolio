@@ -14,7 +14,7 @@ I shipped a Flask backend for a quiz platform. The first time CI tried to push t
 
 The image was around 700 MB. One layer on its own was 673 MB. Every Pod cold-start was pulling that off the registry, and pushes kept timing out because the single big layer took too long to upload in one shot.
 
-<!-- truncate -->
+{/* truncate */}
 
 The Dockerfile was short and looked fine until you stared at it:
 
@@ -39,7 +39,7 @@ USER quizship
 CMD ["gunicorn", "app:app", "--config", "gunicorn.conf.py"]
 ```
 
-<!-- truncate -->
+{/* truncate */}
 ---
 
 ## Why the Image Is So Big

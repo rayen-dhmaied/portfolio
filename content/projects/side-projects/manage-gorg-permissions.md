@@ -21,7 +21,7 @@ I built this so access changes go through pull requests. The YAML file holds the
 
 ### Outcome
 
-:::tip Key Results
+:::tip[Key Results]
 - Published on the GitHub Marketplace
 - Access changes go through pull requests: one YAML file holds teams, repo permissions, and collaborators
 - GitHub App auth with short-lived installation tokens instead of a personal access token
@@ -72,7 +72,7 @@ Design decisions:
 
 **Solution:** I used a GitHub App. The action exchanges the App private key and installation ID for a short-lived token during each run. GitHub scopes the token to the App installation and records changes under the App identity.
 
-:::success Result
+:::success[Result]
 The workflow runs without a long-lived user token, and GitHub audit logs attribute changes to the App.
 :::
 
@@ -84,7 +84,7 @@ The workflow runs without a long-lived user token, and GitHub audit logs attribu
 
 **Solution:** The reconciler manages only teams and repos named in `gorg.yaml`. Inside that managed set, the YAML file is the source of truth. Outside it, the action leaves GitHub state alone.
 
-:::success Result
+:::success[Result]
 Users can start with one team or repository and expand coverage over time.
 :::
 
