@@ -1,0 +1,85 @@
+figure.chart {
+  overflow: visible;
+}
+
+.plot {
+  position: relative;
+}
+
+@media (max-width: 600px) {
+  .plot {
+    overflow-x: auto;
+  }
+}
+
+.tooltip {
+  position: absolute;
+  z-index: 5;
+  min-width: 150px;
+  padding: 0.5rem 0.65rem;
+  pointer-events: none;
+  transform: translate(14px, 14px);
+  font-family: var(--dg-font);
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: var(--dg-ink);
+  background: var(--dg-surface);
+  border: 1px solid var(--dg-border);
+  border-radius: 8px;
+  box-shadow: 0 6px 20px rgb(0 0 0 / 0.12);
+}
+
+.flip {
+  transform: translate(calc(-100% - 14px), 14px);
+}
+
+.tipTitle {
+  margin-bottom: 0.25rem;
+  font-family: var(--dg-mono);
+  font-size: 0.6875rem;
+  color: var(--dg-ink-2);
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  white-space: nowrap;
+}
+
+.key {
+  flex: none;
+  width: 14px;
+  border-top: 2px solid;
+}
+
+.value {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.label {
+  color: var(--dg-ink-2);
+}
+
+.data {
+  margin-top: 0.75rem;
+  font-size: 0.875rem;
+}
+
+.data summary {
+  cursor: pointer;
+  color: var(--dg-ink-2);
+}
+
+.tableWrap {
+  max-height: 320px;
+  margin-top: 0.5rem;
+  overflow: auto;
+}
+
+.tableWrap table {
+  margin: 0;
+  font-size: 0.8125rem;
+  font-variant-numeric: tabular-nums;
+}
