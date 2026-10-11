@@ -60,7 +60,7 @@ export default function Home(): ReactNode {
   return (
     <Layout
       title={siteConfig.tagline}
-      description={`${siteConfig.title}'s Portfolio`}
+      description={String(siteConfig.customFields?.bio ?? '')}
     >
       <main className={styles.main}>
         <div className={styles.splitLayout}>
