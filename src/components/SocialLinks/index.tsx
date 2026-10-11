@@ -1,33 +1,30 @@
-import React from 'react';
+import type {ReactNode} from 'react';
 import styles from './styles.module.css';
 
 export interface SocialLink {
-  icon: string | React.ReactNode;
+  icon: ReactNode;
   url: string;
   label: string;
 }
 
-interface SocialLinksProps {
-  links: SocialLink[];
-  className?: string;
-}
-
-export function SocialLinks({ links, className }: SocialLinksProps) {
+export function SocialLinks({links}: {links: SocialLink[]}) {
   return (
-    <div className={`${styles.socialLinks} ${className || ''}`}>
-      {links.map((link, idx) => (
-        <a
-          key={idx}
-          href={link.url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className={styles.socialLink}
-          aria-label={link.label}
-          title={link.label}
-        >
-          {link.icon}
-        </a>
-      ))}
+    <div className={styles.socialLinks}>
+      {links.map((link) => {
+        // mailto: links open the mail client; only web links get a new tab
+        const external = /^https?:/.test(link.url);
+        return (
+          <a
+            key={link.url}
+            href={link.url}
+            className={styles.socialLink}
+            aria-label={link.label}
+            title={link.label}
+            {...(external && {target: '_blank', rel: 'noopener noreferrer'})}>
+            {link.icon}
+          </a>
+        );
+      })}
     </div>
   );
 }
@@ -47,11 +44,5 @@ export const GitHubIcon = () => (
 export const EmailIcon = () => (
   <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
     <path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z" />
-  </svg>
-);
-
-export const TwitterIcon = () => (
-  <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
-    <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
   </svg>
 );
