@@ -1,4 +1,5 @@
 figure.chart {
+  position: relative;
   overflow: visible;
 }
 
