@@ -5,6 +5,8 @@ tags: [AWS, EKS, Kubernetes, ArgoCD, GitOps, Keycloak, Flask, React, Jinja2, Git
 description: Deployment platform that cut per-app deploy time from 15 minutes to 3 for 20+ customer apps across 3 AWS regions. Git and dashboard deploys share one Python orchestrator.
 ---
 
+import Architecture from './images/architecture.svg';
+
 ## Overview
 
 ### What it is
@@ -19,7 +21,7 @@ We needed a Git path for batch changes and a dashboard path for day-to-day app d
 
 ### Outcome
 
-:::tip Key Results
+:::tip[Key Results]
 - Per-app deploy time dropped from 15 minutes to 3
 - 20+ customers run across 3 AWS regions
 - Odoo, Moodle, and Mattermost share one deployment engine; a new app is a template set, not new code
@@ -45,7 +47,9 @@ The Git path still exists for batch work, and the dashboard handles one-off depl
 
 ### Architecture Diagram
 
-![DeployCenter Architecture](./images/deploy-center/arch.png)
+<figure className="diagram">
+  <Architecture role="img" />
+</figure>
 
 ### Deploy Flow
 
@@ -55,7 +59,7 @@ Both entry points call the same Python orchestration core.
 
 **Dashboard path:** a user signs in through Keycloak, chooses a customer and app template, fills region-specific values, and clicks deploy. Flask validates the request, calls the same orchestrator, and writes audit records to PostgreSQL.
 
-:::info Key Components
+:::info[Key Components]
 React dashboard (S3 + CloudFront) -> Flask API (EKS) -> Python orchestrator -> ArgoCD (multi-cluster) -> EKS clusters -> AWS (EFS, Route53, S3)
 
 Parallel path: GitHub Actions -> same Python orchestrator -> same downstream targets
@@ -80,7 +84,7 @@ Parallel path: GitHub Actions -> same Python orchestrator -> same downstream tar
 
 **Solution:** I moved the deployment logic into a Python package with no Flask or GitHub Actions dependency. The CI workflow imports it, and the Flask backend imports it. Both call the same `deploy_customer_app()` entrypoint with the same input shape.
 
-:::success Result
+:::success[Result]
 Git pushes and dashboard actions use the same renderer, provisioning code, and ArgoCD calls. Template changes ship once.
 :::
 
@@ -92,7 +96,7 @@ Git pushes and dashboard actions use the same renderer, provisioning code, and A
 
 **Solution:** I wrapped the sequence in a coordinator that records each created resource. External calls use retry logic for transient failures. If a later step fails, the coordinator walks the created-resource list backward, deletes what it created, reverts the Git commit, and removes the partial ArgoCD app.
 
-:::success Result
+:::success[Result]
 Failed deploys no longer leave manual cleanup work. The team can retry from GitHub Actions or the dashboard.
 :::
 
@@ -104,6 +108,6 @@ Failed deploys no longer leave manual cleanup work. The team can retry from GitH
 
 **Solution:** I designed templates as base files plus customer overrides. The base template contains the standard Helm values and manifests. `customers.yaml` or the dashboard provides only the customer-specific keys. The renderer merges those keys into the base before writing the final manifests.
 
-:::success Result
+:::success[Result]
 Three base app templates serve 20+ customers. A new customer needs a YAML entry or dashboard submission, not a template fork.
 :::

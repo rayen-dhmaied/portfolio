@@ -509,6 +509,65 @@ code, pre, kbd { font-family: var(--font-mono); }
   }
 }
 
+/* ─── Diagrams ───────────────────────────────────────────── */
+
+/* Inline SVGs built by scripts/diagrams take every non-brand color and font
+   from these, so they follow the theme switch and any redesign of the palette */
+:root {
+  --dg-font: var(--font-body);
+  --dg-mono: var(--font-mono);
+  --dg-surface: #ffffff;
+  --dg-border: #dcdde8;
+  --dg-ink: var(--portfolio-ink);
+  --dg-ink-2: #55577a;
+  --dg-label: var(--ifm-color-primary);
+  --dg-edge: #a3a5bf;
+  --dg-accent: var(--ifm-color-primary);
+  --dg-accent-2: #0f9f94;
+  --dg-warn: #d9822b;
+  --dg-danger: #e0507a;
+  --dg-tint: 0.045;
+  /* chart series: validated as a set with the dataviz palette checker, re-run it if you change them */
+  --dg-series-1: #5b5bd6;
+  --dg-series-2: #eb6834;
+  --dg-series-3: #1baf7a;
+  --dg-grid: #e9e9f1;
+  --dg-page: var(--ifm-background-color);
+}
+
+[data-theme='dark'] {
+  --dg-surface: #11112a;
+  --dg-border: #272a48;
+  --dg-ink-2: #9a9cc0;
+  --dg-label: #a8aaf0;
+  --dg-edge: #565a82;
+  --dg-accent-2: #2cc4b6;
+  --dg-warn: #e8a050;
+  --dg-danger: #f0718f;
+  --dg-tint: 0.03;
+  --dg-series-1: #7e7df0;
+  --dg-series-2: #d95926;
+  --dg-series-3: #199e70;
+  --dg-grid: #1b1c33;
+}
+
+.diagram { margin: 1.5rem 0 2rem; overflow-x: auto; }
+.diagram svg { display: block; max-width: 100%; min-width: 560px; height: auto; margin: 0 auto; }
+
+/* Classes inside the SVGs (they carry light-theme fallbacks for standalone viewing) */
+.dg-t { font-family: var(--dg-font); fill: var(--dg-ink); }
+.dg-m { font-family: var(--dg-mono); font-weight: 500; fill: var(--dg-ink-2); }
+.dg-b { font-weight: 700; }
+.dg-label { font-weight: 700; letter-spacing: 0.1em; fill: var(--dg-label); }
+.dg-card { fill: var(--dg-surface); stroke: var(--dg-border); }
+.dg-ghost { fill: none; stroke: var(--dg-edge); stroke-dasharray: 4 4; }
+
+/* Chart hover: crosshair and lifted band; the tooltip comes from ChartFigure */
+.dg-hit { cursor: crosshair; outline: none; }
+.dg-xhair, .dg-lift { opacity: 0; }
+.dg-hit:hover .dg-xhair, .dg-hit:focus .dg-xhair { opacity: 1; }
+.dg-hit:hover .dg-lift, .dg-hit:focus .dg-lift { opacity: 0.14; }
+
 /* ─── Misc ───────────────────────────────────────────────── */
 
 .badge {

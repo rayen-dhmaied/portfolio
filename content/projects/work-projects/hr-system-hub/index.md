@@ -5,6 +5,8 @@ tags: [TypeScript, React, Firebase, Cloud Functions, Firestore, Firebase Auth, C
 description: Contract-delivered HR platform that replaced a factory's paper evaluation process. Serverless on Firebase with EU data residency, about 120 API endpoints, and 1,400+ tests.
 ---
 
+import Architecture from './images/architecture.svg';
+
 ## Overview
 
 ### What it is
@@ -21,7 +23,7 @@ We shipped it as a managed SaaS on serverless components: nothing for a single-p
 
 ### Outcome
 
-:::tip Key Results
+:::tip[Key Results]
 - Replaced the client's paper evaluation cycle end to end: state machine, e-signatures, HR validation, and an archived PDF per approved evaluation
 - About 120 REST endpoints on serverless Firebase, pinned to EU regions; Firestore rules deny client writes, so the audited API is the only write path
 - Scoring engine enforces the group HR standard: objective results capped at 150, weights that must sum to 100%, 3 to 6 objectives per evaluation
@@ -34,23 +36,11 @@ We shipped it as a managed SaaS on serverless components: nothing for a single-p
 
 ## Architecture
 
-```mermaid
-graph TD
-    SPA[React SPA] -->|ID token| FH
+<figure className="diagram">
+  <Architecture role="img" />
+</figure>
 
-    subgraph FB ["Firebase (EU)"]
-        FH[Firebase Hosting] -->|/api rewrite| CF[Cloud Functions<br/>Express]
-        CF -.-> AU[Firebase Auth]
-        CF --> FS[(Firestore)]
-        CF --> CS[Cloud Storage]
-        SCH[Cloud Scheduler] --> CF
-    end
-
-    style CF fill:#FF7043,color:#fff
-    style FS fill:#FFA000,color:#fff
-```
-
-:::info Architecture Overview
+:::info[Architecture Overview]
 The SPA signs in through the Firebase Auth SDK and sends an ID token with every request. Hosting rewrites `/api/**` to the Express app, where middleware verifies the token, reads the role claim, and loads the caller's profile before any handler runs. Handlers use the Admin SDK; Firestore and Storage rules block direct client access, so every mutation flows through the audited API. Downloads go through signed URLs with a 15-minute TTL, and a scheduled function sweeps for stale evaluations every 24 hours.
 :::
 
@@ -74,7 +64,7 @@ The SPA signs in through the Firebase Auth SDK and sends an ID token with every 
 
 **Solution:** I modeled around access paths instead of entities. Each evaluation embeds a snapshot of the employee's profile at creation, so history reads one document and stays faithful to the interview date. Composite indexes back the two hot queries: employee history ordered by creation, and the manager queue filtered by status. Notifications live as a per-user subcollection, so the recipient is the hierarchy rather than a duplicated field, and a collection-group index lets the reminder job check its cooldown without scanning.
 
-:::success Result
+:::success[Result]
 List views read a fixed number of documents regardless of org size, and approved evaluations stay historically accurate through reorganizations.
 :::
 
@@ -86,7 +76,7 @@ List views read a fixed number of documents regardless of org size, and approved
 
 **Solution:** I encoded the form's rules as server-side guards. The state machine refuses out-of-order transitions. The scoring module caps objective results at 150 and rejects weight totals other than 100%. The objective-count rule (3 to 6, minimum one for production staff) blocks creation and update alike. Signatures are write-once, approved evaluations are read-only, and the one escape hatch, an admin unlock, writes an audit entry. Each rule carries the requirement ID from the spec (EVAL-001 through EVAL-012), so commits trace back to the clause that demanded them.
 
-:::success Result
+:::success[Result]
 HR validates evaluations instead of policing them. The client audits the delivery against the spec by grepping requirement IDs through the git history.
 :::
 
@@ -98,6 +88,6 @@ HR validates evaluations instead of policing them. The client audits the deliver
 
 **Solution:** I built the layout engine around measurement before drawing. Each row measures its wrapped text and sizes itself first, so borders follow content. The BROUILLON watermark draws as a rotated page background and shrinks to fit A4 instead of bleeding off it. The signature block moves as one unit to the next page when it would split. Signatures embed as PNGs decoded from the data URLs captured in the app.
 
-:::success Result
+:::success[Result]
 Approved evaluations archive as versioned PDFs on Cloud Storage that HR files in place of the paper form. Drafts stream with the watermark so nobody mistakes a preview for a signed report.
 :::

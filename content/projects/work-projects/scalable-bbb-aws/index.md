@@ -5,6 +5,8 @@ tags: [AWS, EC2, EKS, CloudFormation, Helm, Auto Scaling, Prometheus, Grafana, L
 description: Auto-scaling BigBlueButton fleet on AWS. A custom AMI cut instance launch from 11 minutes to 3, and scale-in protection keeps live meetings up while the fleet shrinks.
 ---
 
+import Architecture from './images/architecture.svg';
+
 ## Overview
 
 ### What it is
@@ -19,7 +21,7 @@ The platform needed more capacity without breaking live meetings during scale-in
 
 ### Outcome
 
-:::tip Key Results
+:::tip[Key Results]
 - Instance launch time dropped from 11 minutes to 3 with a custom AMI
 - Scale-in stopped dropping live meetings: instances with active sessions hold termination protection
 - Recordings survive any backend change: the fleet and Scalelite share one EFS volume
@@ -33,32 +35,11 @@ The platform needed more capacity without breaking live meetings during scale-in
 
 ### High-Level Flow
 
-```mermaid
-graph TD
-    U[Users] --> GL
+<figure className="diagram">
+  <Architecture role="img" />
+</figure>
 
-    subgraph EKS ["EKS"]
-        GL[Greenlight / LMS entry] --> SL[Scalelite<br/>meeting router]
-    end
-
-    subgraph ASG ["Auto Scaling Group"]
-        B1[BBB<br/>AZ-a]
-        B2[BBB<br/>AZ-b]
-        B3[BBB<br/>AZ-c]
-    end
-
-    SL --> B1
-    SL --> B2
-    SL --> B3
-
-    B1 & B2 & B3 --> EFS[(EFS recordings)]
-    EFS --> SL
-
-    style SL fill:#4CAF50,color:#fff
-    style EFS fill:#FF9900,color:#fff
-```
-
-:::info Key Components
+:::info[Key Components]
 Greenlight or an LMS sends users into Scalelite. Scalelite picks one BigBlueButton instance from the Auto Scaling Group and proxies the meeting there. Each BigBlueButton instance and the Scalelite pods mount the same EFS volume, so recordings stay reachable even when the backend pool changes.
 :::
 
@@ -81,7 +62,7 @@ Greenlight or an LMS sends users into Scalelite. Scalelite picks one BigBlueButt
 
 **Solution:** I moved the heavy install work into a custom AMI. Bootstrap now handles only instance-specific configuration: hostname, DNS, certificates, Scalelite registration, EFS mount, and monitoring agents.
 
-:::success Result
+:::success[Result]
 Launch time dropped from 11 minutes to 3, which gave scale-out enough time to catch real load spikes.
 :::
 
@@ -93,7 +74,7 @@ Launch time dropped from 11 minutes to 3, which gave scale-out enough time to ca
 
 **Solution:** A systemd timer queries the BigBlueButton API for active meetings and toggles EC2 scale-in protection on the instance. The 6% CPU scale-in threshold keeps idle instances as the first candidates, and scale-in protection blocks termination for boxes still serving users.
 
-:::success Result
+:::success[Result]
 Scale-in stopped dropping live meetings while the fleet still shrank after traffic fell.
 :::
 
@@ -105,6 +86,6 @@ Scale-in stopped dropping live meetings while the fleet still shrank after traff
 
 **Solution:** Launch and shutdown scripts handle the full lifecycle. On launch, the instance creates its Route53 A record, requests a Let's Encrypt certificate, mounts EFS, and registers with Scalelite through a shared secret. On shutdown, it deregisters from Scalelite and deletes its DNS record.
 
-:::success Result
+:::success[Result]
 New instances join the meeting pool with DNS, TLS, shared storage, and Scalelite registration in place before bootstrap finishes.
 :::

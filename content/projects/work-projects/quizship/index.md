@@ -1,9 +1,11 @@
 ---
 title: QuizShip - Live Interactive Quiz Platform
 sidebar_position: 4
-tags: [Python, Flask, Go, WebSocket, Stripe, Claude, LTI, Kubernetes, ArgoCD, Prometheus, Grafana, PostgreSQL, Redis, Celery]
+tags: [Python, Flask, Go, WebSocket, Stripe, Claude, LTI, Kubernetes, ArgoCD, Prometheus, Grafana, PostgreSQL, Redis, Celery, k6]
 description: Production quiz SaaS built as two services, Go for live WebSocket gameplay and Python for billing, content, and AI generation, with Stripe subscriptions and GitOps deploys on Kubernetes.
 ---
+
+import Architecture from './images/architecture.svg';
 
 **Live App:** [quizship.com](https://quizship.com)  
 **API Docs:** [api.quizship.com/store/docs](https://api.quizship.com/store/docs)
@@ -22,9 +24,10 @@ So I split the platform along that grain: Go for live sessions, Python for the p
 
 ### Outcome
 
-:::tip Key Results
+:::tip[Key Results]
 - Tiered Stripe subscriptions with a metered AI quota, hardened against webhook races, concurrent updates, refunds, and disputes
 - Sticky WebSocket routing scales the game tier horizontally without dropping in-flight games
+- In a k6 load test on a production-like copy, two Go pods held 30,000 concurrent players with zero errors and delivered each question at a 13 ms p95, measured inside the cluster
 - New game formats ship as drop-in modules on the Go server and the frontend
 - Claude quiz generation from a prompt or a PDF, and LTI 1.3 launches from LMS courses
 - About 1,750 store tests and a race-checked Go suite gate every image build
@@ -34,36 +37,11 @@ So I split the platform along that grain: Go for live sessions, Python for the p
 
 ## Architecture
 
-```mermaid
-flowchart TB
-    LMS["LMS Courses"]
-    U["Players & Hosts"]
+<figure className="diagram">
+  <Architecture role="img" />
+</figure>
 
-    subgraph K8S ["Kubernetes"]
-        PY["Python Service<br/>API + Celery workers"]
-        GO["Go Service<br/>live games"]
-    end
-
-    LMS --->|LTI 1.3| PY
-    U -->|REST| PY
-    U -->|WebSocket| GO
-    GO <-->|plan check, results| PY
-
-    PY --> PG[(PostgreSQL)]
-    PY <--> ST[Stripe]
-    PY --> CL[Claude API]
-    PY --> RD[(Redis)]
-    GO ---> RD
-
-    style PY fill:#4CAF50,color:#fff
-    style GO fill:#00ADD8,color:#fff
-    style RD fill:#DC382D,color:#fff
-    style PG fill:#336791,color:#fff
-    style ST fill:#635BFF,color:#fff
-    style CL fill:#D97757,color:#fff
-```
-
-:::info Architecture Overview
+:::info[Architecture Overview]
 Flask handles auth, billing, content, AI generation, LTI, admin, and webhooks, with Redis for caching, rate limits, and locks. Go runs the live games, keeps their state in Redis, and calls Flask for the plan check at creation and the result at the end. Celery workers take jobs from Redis and write to PostgreSQL.
 :::
 
@@ -87,7 +65,7 @@ Flask handles auth, billing, content, AI generation, LTI, admin, and webhooks, w
 
 **Solution:** I moved every per-game concern behind a contract interface and a registry keyed by `kind`, with sub-contracts for authoring, hosting, and playing. Pages read from the registry instead of switching on string literals. For LMS launches without an explicit `kind`, the frontend asks each registered contract whether it recognizes the payload. The Go server does the same with a `game.Type` interface, so room, snapshot, and result code never branch on `kind`.
 
-:::success Result
+:::success[Result]
 A new game is one directory, one contract, and one registration on each side. The second format shipped without touching the host, play, or dashboard pages, and later formats followed the same path.
 :::
 
@@ -97,10 +75,12 @@ A new game is one directory, one contract, and one registration on each side. Th
 
 **Problem:** Each live game's state lives in memory on one Go pod, so all of its HTTP and WebSocket traffic must reach that pod. Round-robin balancing would break in-flight games as soon as the deployment scaled past one replica.
 
-**Solution:** The nginx ingress hashes on the `game_id` a regex captures from the request path, so the same game always reaches the same pod. Other paths fall back to round-robin. A pod that gets a game it doesn't hold rehydrates it from the Redis snapshot. On shutdown, a pod closes its sockets with code 1001; clients reconnect, and the new owner restores the snapshot and reschedules running timers.
+**Solution:** Clients send the game id as a `?g=` query parameter on every WebSocket and status request, and the nginx ingress hashes on it with `upstream-hash-by: "$arg_g"`, so the same game always reaches the same pod while different games spread across pods. A pod that gets a game it doesn't hold rehydrates it from the Redis snapshot. On shutdown, a pod closes its sockets with code 1001; clients reconnect, and the new owner restores the snapshot and reschedules running timers.
 
-:::success Result
-The game deployment scales horizontally without breaking active sessions. Rolling deploys do not drop live games.
+The first version hashed on a game id that a regex captured from the request path. The regex ran before the ingress stripped the `/game` prefix, so it never matched, every request hashed an empty key, and every game landed on the same pod. Requests still succeeded and total CPU looked normal, so no dashboard showed it; a load test did. Hashing on a query parameter needs no regex, so the path rewrite can't break it.
+
+:::success[Result]
+The game deployment scales horizontally without breaking active sessions, and under load the two pods' CPU stays within 10% of each other. Rolling deploys do not drop live games.
 :::
 
 ---
@@ -115,7 +95,7 @@ The game deployment scales horizontally without breaking active sessions. Rollin
 - Each customer holds one live subscription: the store refuses a second checkout, expires stale sessions, and cancels duplicates.
 - Upgrades invoice the prorated difference at once and grant only the remaining share of the new AI quota. Downgrades wait for period end on a subscription schedule. A dispute or a full refund of the current period ends the paid plan.
 
-:::success Result
+:::success[Result]
 Subscription state corrects itself on the next Stripe event for that customer. I verified each billing path end to end with Stripe test clocks, and none of the original races has recurred in production.
 :::
 
@@ -127,6 +107,7 @@ Subscription state corrects itself on the next Stripe event for that customer. I
 
 **Solution:** Generation runs on Claude with structured output bound to each format's schema, so every reply parses. A per-format validator checks the rules a schema can't express and catches placeholder text. On a failure, the service sends Claude the exact problems for one repair round if the time budget allows. Input is a prompt or a PDF, and the shared system prompt is cached.
 
-:::success Result
+:::success[Result]
 A draft that fails the repair round returns an error and costs the host no quota, while its token cost still counts toward the plan's margin.
 :::
+

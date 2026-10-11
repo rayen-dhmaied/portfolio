@@ -5,6 +5,8 @@ tags: [Go, Microservices, MongoDB, Neo4j, Istio, Keycloak, Kubernetes, Docker]
 description: Two Go microservices behind Istio, with mTLS in the mesh, Keycloak JWT validation at the ingress, MongoDB for posts, and Neo4j for the follower graph. Images under 10MB.
 ---
 
+import Architecture from './images/architecture.svg';
+
 [View Source Code on GitHub](https://github.com/rayen-dhmaied/hornet) →
 
 ## Overview
@@ -21,7 +23,7 @@ The workshop gave me room to apply the parts I care about as a cloud and DevOps 
 
 ### Outcome
 
-:::tip Key Results
+:::tip[Key Results]
 - Distroless images under 10MB per service, about 90% smaller than the distro-base build
 - One database per workload: MongoDB for posts and timelines, Neo4j for the follower graph
 - Istio validates Keycloak JWTs at ingress and enforces mTLS; the Go services carry no auth code
@@ -34,29 +36,11 @@ The workshop gave me room to apply the parts I care about as a cloud and DevOps 
 
 ### High-Level Flow
 
-```mermaid
-graph TD
-    C[Client] -->|JWT| IG
-    KC[Keycloak] -.->|JWKS| IG
+<figure className="diagram">
+  <Architecture role="img" />
+</figure>
 
-    subgraph MESH ["Istio mesh (mTLS)"]
-        IG[Ingress Gateway] --> PS[Posts<br/>Go]
-        IG --> FS[Followers<br/>Go]
-        PS <--> FS
-    end
-
-    PS --> M[(MongoDB)]
-    FS --> N[(Neo4j)]
-
-    style IG fill:#466BB0,color:#fff
-    style PS fill:#00ADD8,color:#fff
-    style FS fill:#00ADD8,color:#fff
-    style M fill:#47A248,color:#fff
-    style N fill:#FF9800,color:#fff
-    style KC fill:#2196F3,color:#fff
-```
-
-:::info Key Components
+:::info[Key Components]
 The client enters through the Istio ingress gateway. Istio validates the Keycloak JWT before the request reaches a service, then routes traffic through the mesh. Posts reads and writes MongoDB documents. Followers handles graph queries in Neo4j.
 :::
 
@@ -79,7 +63,7 @@ The client enters through the Istio ingress gateway. Istio validates the Keycloa
 
 **Solution:** I split the backend by workload. Posts uses MongoDB for document storage and indexed timeline reads. Followers uses Neo4j for relationship traversal and friend suggestions. When a feature needs both sides, one service calls the other over REST.
 
-:::success Result
+:::success[Result]
 Each service uses a database that matches its query pattern. Friend suggestions stay in Cypher instead of turning into nested application-side joins.
 :::
 
@@ -91,7 +75,7 @@ Each service uses a database that matches its query pattern. Friend suggestions 
 
 **Solution:** I moved authentication to Istio. The ingress gateway validates Keycloak JWTs through `RequestAuthentication`, and `AuthorizationPolicy` blocks unauthenticated traffic before it reaches Go. Services read the identity headers Istio passes through.
 
-:::success Result
+:::success[Result]
 The Go services do not carry JWT parsing code. A new service can join the mesh and inherit the same auth policy.
 :::
 
