@@ -1,0 +1,198 @@
+# Tag pages for the projects. Without this file Docusaurus kebab-cases the names
+# (EC2 -> ec-2, Neo4j -> neo-4-j); a new tag gets a warning until it is added here.
+
+ArgoCD:
+  label: ArgoCD
+  permalink: /argocd
+Auto Scaling:
+  label: Auto Scaling
+  permalink: /auto-scaling
+AWS:
+  label: AWS
+  permalink: /aws
+Bash:
+  label: Bash
+  permalink: /bash
+Celery:
+  label: Celery
+  permalink: /celery
+'CI/CD':
+  label: 'CI/CD'
+  permalink: /ci-cd
+Claude:
+  label: Claude
+  permalink: /claude
+Claude Code:
+  label: Claude Code
+  permalink: /claude-code
+Cloud Functions:
+  label: Cloud Functions
+  permalink: /cloud-functions
+Cloud Scheduler:
+  label: Cloud Scheduler
+  permalink: /cloud-scheduler
+Cloud Storage:
+  label: Cloud Storage
+  permalink: /cloud-storage
+CloudFormation:
+  label: CloudFormation
+  permalink: /cloudformation
+CloudFront:
+  label: CloudFront
+  permalink: /cloudfront
+Docker:
+  label: Docker
+  permalink: /docker
+EC2:
+  label: EC2
+  permalink: /ec2
+ECS:
+  label: ECS
+  permalink: /ecs
+EKS:
+  label: EKS
+  permalink: /eks
+Express:
+  label: Express
+  permalink: /express
+Firebase:
+  label: Firebase
+  permalink: /firebase
+Firebase Auth:
+  label: Firebase Auth
+  permalink: /firebase-auth
+Firestore:
+  label: Firestore
+  permalink: /firestore
+Flask:
+  label: Flask
+  permalink: /flask
+GitHub Actions:
+  label: GitHub Actions
+  permalink: /github-actions
+GitHub API:
+  label: GitHub API
+  permalink: /github-api
+GitHub App:
+  label: GitHub App
+  permalink: /github-app
+GitOps:
+  label: GitOps
+  permalink: /gitops
+Go:
+  label: Go
+  permalink: /go
+Grafana:
+  label: Grafana
+  permalink: /grafana
+Helm:
+  label: Helm
+  permalink: /helm
+i18n:
+  label: i18n
+  permalink: /i18n
+IaC:
+  label: IaC
+  permalink: /iac
+Istio:
+  label: Istio
+  permalink: /istio
+Jaeger:
+  label: Jaeger
+  permalink: /jaeger
+Jinja2:
+  label: Jinja2
+  permalink: /jinja2
+k6:
+  label: k6
+  permalink: /k6
+Keycloak:
+  label: Keycloak
+  permalink: /keycloak
+Kiali:
+  label: Kiali
+  permalink: /kiali
+Kubernetes:
+  label: Kubernetes
+  permalink: /kubernetes
+Loki:
+  label: Loki
+  permalink: /loki
+LTI:
+  label: LTI
+  permalink: /lti
+Material UI:
+  label: Material UI
+  permalink: /material-ui
+Microservices:
+  label: Microservices
+  permalink: /microservices
+MongoDB:
+  label: MongoDB
+  permalink: /mongodb
+Monitoring:
+  label: Monitoring
+  permalink: /monitoring
+Neo4j:
+  label: Neo4j
+  permalink: /neo4j
+NestJS:
+  label: NestJS
+  permalink: /nestjs
+Nginx:
+  label: Nginx
+  permalink: /nginx
+Oncall:
+  label: Oncall
+  permalink: /oncall
+PDFKit:
+  label: PDFKit
+  permalink: /pdfkit
+PostgreSQL:
+  label: PostgreSQL
+  permalink: /postgresql
+Prometheus:
+  label: Prometheus
+  permalink: /prometheus
+PyGithub:
+  label: PyGithub
+  permalink: /pygithub
+Python:
+  label: Python
+  permalink: /python
+React:
+  label: React
+  permalink: /react
+Redis:
+  label: Redis
+  permalink: /redis
+S3:
+  label: S3
+  permalink: /s3
+Stripe:
+  label: Stripe
+  permalink: /stripe
+Tailwind:
+  label: Tailwind
+  permalink: /tailwind
+TanStack Query:
+  label: TanStack Query
+  permalink: /tanstack-query
+Terraform:
+  label: Terraform
+  permalink: /terraform
+TypeScript:
+  label: TypeScript
+  permalink: /typescript
+Uptime Kuma:
+  label: Uptime Kuma
+  permalink: /uptime-kuma
+Vitest:
+  label: Vitest
+  permalink: /vitest
+WebSocket:
+  label: WebSocket
+  permalink: /websocket
+YAML:
+  label: YAML
+  permalink: /yaml
