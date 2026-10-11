@@ -12,10 +12,15 @@ on:
 permissions:
   contents: write
 
+# Two quick pushes would otherwise race to force-push gh-pages
+concurrency:
+  group: gh-pages
+  cancel-in-progress: true
+
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -25,22 +30,25 @@ jobs:
         with:
           node-version: '22'
           cache: 'npm'
-      
+
       - name: Install dependencies
-        run: npm ci 
-      
+        run: npm ci
+
+      - name: Type check
+        run: npm run typecheck
+
       - name: Build project
         run: npm run build
         env:
           NODE_ENV: production
-      
+
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./build
           publish_branch: gh-pages
-          force_orphan: true 
+          force_orphan: true
           user_name: 'github-actions[bot]'
           user_email: 'github-actions[bot]@users.noreply.github.com'
           commit_message: 'Deploy portfolio site'
