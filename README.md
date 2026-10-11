@@ -7,28 +7,29 @@ This project is a **documentation-first personal portfolio built with Docusaurus
 
 All portfolio content lives in these files:
 
-```text    
+```text
 .
-├── docusaurus.config.ts
+├── docusaurus.config.ts      # name, tagline, bio, social links
 └── content
+    ├── highlights.json       # homepage stats and expertise cards
     ├── blog
     │   ├── authors.yml
-    │   ├── tags.yml
-    │   └── welcome.md
-    ├── highlights.json
+    │   └── <date>-<slug>.md  # or <date>-<slug>/index.md with its images
     ├── projects
-    │   └── intro.md
+    │   ├── work-projects
+    │   └── side-projects
     └── resume
-        ├── certifications.md
-        ├── education.md
+        ├── skills.md
         ├── experience.md
-        ├── images
-        └── skills.md
+        ├── education.md
+        └── certifications    # index.md and badge images
 ```
+
+A page with images lives in its own folder as `index.md`, with the images next to it.
 
 ### Modifying Content
 
-To update portfolio content and personal information, you only need to edit `docusauurs.config.ts` and the files inside the `content` directory.
+To update portfolio content and personal information, you only need to edit `docusaurus.config.ts` and the files inside the `content` directory.
 
 ## Installation
 
@@ -55,3 +56,17 @@ npm run build
 ```
 
 Generates static files in the `build` directory for static hosting.
+
+
+## Type Check
+
+```bash
+npm run typecheck
+```
+
+Runs the TypeScript compiler over the site code without emitting files.
+
+
+## Deployment
+
+Every push to `main` builds the site and publishes it to the `gh-pages` branch through GitHub Actions (`.github/workflows/publish-gh-pages.yml`).
