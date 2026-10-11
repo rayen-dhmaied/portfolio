@@ -75,7 +75,7 @@ const config: Config = {
         // id omitted => default instance
         path: './content/resume',
         routeBasePath: 'resume',
-        sidebarPath: './sidebars.ts',
+        sidebarPath: './sidebars/resume.ts',
       },
     ],
     [
@@ -84,7 +84,7 @@ const config: Config = {
         id: 'projects',
         path: './content/projects',
         routeBasePath: 'projects',
-        sidebarPath: './sidebars.ts',
+        sidebarPath: './sidebars/projects.ts',
       },
     ],
   ],
