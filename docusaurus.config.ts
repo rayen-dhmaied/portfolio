@@ -68,10 +68,6 @@ const config: Config = {
       } satisfies Preset.Options,
     ],
   ],
-  markdown: {
-    mermaid: true,
-  },
-  themes: ['@docusaurus/theme-mermaid'],
   plugins: [
     [
       '@docusaurus/plugin-content-docs',
@@ -94,9 +90,6 @@ const config: Config = {
   ],
   themeConfig: {
     image: 'img/social-card.png',
-    mermaid: {
-      theme: {light: 'neutral', dark: 'neutral'},
-    },
     colorMode: {
       respectPrefersColorScheme: true,
     },
