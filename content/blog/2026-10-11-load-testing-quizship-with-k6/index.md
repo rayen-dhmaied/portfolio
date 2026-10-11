@@ -102,7 +102,7 @@ import { setTimeout } from 'k6/timers';
 import { Trend } from 'k6/metrics';
 
 const fanout = new Trend('fanout_ms', true);
-let hostClickedAt = 0;   // set when the host sends "next"
+let hostClickedAt = 0; // set when the host sends "next"
 
 function student(url) {
   const ws = new WebSocket(url);
@@ -110,17 +110,23 @@ function student(url) {
     const msg = JSON.parse(e.data);
     if (msg.type !== 'question') return;
     fanout.add(Date.now() - hostClickedAt);
-    if (Math.random() < 0.95) {   // 5% of students never answer
-      setTimeout(() => ws.send(JSON.stringify({ type: 'answer', choice: Math.floor(Math.random() * 4) })),
-                 2000 + Math.random() * 13000);   // the rest answer after 2 to 15 seconds
+    // 5% of students never answer; the rest answer after 2 to 15 seconds
+    if (Math.random() < 0.95) {
+      const answer = { type: 'answer', choice: Math.floor(Math.random() * 4) };
+      const delay = 2000 + Math.random() * 13000;
+      setTimeout(() => ws.send(JSON.stringify(answer)), delay);
     }
   };
   return ws;
 }
 
 export default function () {
-  // create the game and open the host's socket, then students join over 30 seconds
-  for (let i = 0; i < 30; i++) setTimeout(() => student(`${__ENV.WS_URL}/watch/${gameId}`), Math.random() * 30000);
+  // create the game and open the host's socket,
+  // then students join over 30 seconds
+  const url = `${__ENV.WS_URL}/watch/${gameId}`;
+  for (let i = 0; i < 30; i++) {
+    setTimeout(() => student(url), Math.random() * 30000);
+  }
 }
 ```
 
@@ -138,8 +144,11 @@ export const options = {
     ramp: {
       executor: 'ramping-vus',
       stages: [
-        { duration: '3m', target: 320 }, { duration: '6m', target: 320 },   // 320 classes, ~10,000 players
-        { duration: '3m', target: 480 }, { duration: '6m', target: 480 },
+        // 320 classes, ~10,000 players
+        { duration: '3m', target: 320 },
+        { duration: '6m', target: 320 },
+        { duration: '3m', target: 480 },
+        { duration: '6m', target: 480 },
         // and so on up to 960 classes, ~30,000 players
       ],
     },
@@ -158,9 +167,16 @@ In the API test, one iteration is one HTTP request. Each picks a route weighted 
 import http from 'k6/http';
 import { SharedArray } from 'k6/data';
 
-const TOKENS = new SharedArray('tokens', () => open('/tokens/tokens.txt').split('\n').filter(Boolean));
-const ROUTES = [['/users/me', 30], ['/quiz-usage/dashboard?days=30', 20], ['/quiz-usage/history?days=30', 20],
-  ['/quizzes', 20], ['/plans', 10]].flatMap(([path, weight]) => Array(weight).fill(path));
+const TOKENS = new SharedArray('tokens', () =>
+  open('/tokens/tokens.txt').split('\n').filter(Boolean));
+
+const ROUTES = [
+  ['/users/me', 30],
+  ['/quiz-usage/dashboard?days=30', 20],
+  ['/quiz-usage/history?days=30', 20],
+  ['/quizzes', 20],
+  ['/plans', 10],
+].flatMap(([path, weight]) => Array(weight).fill(path));
 
 export const options = {
   scenarios: {
@@ -170,16 +186,21 @@ export const options = {
       timeUnit: '1s',
       preAllocatedVUs: 200,
       maxVUs: 3000,
-      stages: [{ duration: '1m', target: 200 }, { duration: '4m', target: 200 } /* and up to 600 */],
+      stages: [
+        { duration: '1m', target: 200 },
+        { duration: '4m', target: 200 },
+        // and up to 600
+      ],
     },
   },
 };
 
 export default function () {
   const path = ROUTES[Math.floor(Math.random() * ROUTES.length)];
+  const token = TOKENS[Math.floor(Math.random() * TOKENS.length)];
   http.get(`${__ENV.STORE_URL}${path}`, {
-    headers: { Authorization: `Bearer ${TOKENS[Math.floor(Math.random() * TOKENS.length)]}` },
-    tags: { name: path.split('?')[0] },   // one result row per route
+    headers: { Authorization: `Bearer ${token}` },
+    tags: { name: path.split('?')[0] }, // one result row per route
   });
 }
 ```
@@ -225,23 +246,32 @@ metadata:
 spec:
   restartPolicy: Never
   nodeSelector: { nodepool: loadtest }  # the dedicated test nodes
-  tolerations: [{ key: loadtest, operator: Equal, value: "true", effect: NoSchedule }]
+  tolerations:
+  - { key: loadtest, operator: Equal, value: "true", effect: NoSchedule }
   affinity:
-    podAntiAffinity:                    # not on a node running another pod of the test namespace
+    # not on a node running another pod of the test namespace
+    podAntiAffinity:
       requiredDuringSchedulingIgnoredDuringExecution:
       - topologyKey: kubernetes.io/hostname
         labelSelector:
           matchExpressions: [{ key: app, operator: NotIn, values: [k6] }]
-  hostAliases:                          # the test hostname points at the ingress copy
+  # the test hostname points at the ingress copy
+  hostAliases:
   - ip: "<ingress ClusterIP>"
     hostnames: [api.loadtest.internal]
   containers:
   - name: k6
     image: grafana/k6:2.3.0
-    args: [run, --execution-segment=0:1/6, --execution-segment-sequence=0,1/6,2/6,3/6,4/6,5/6,1,
-           --out, csv=/out/metrics.csv.gz, /scripts/class.js]
+    args:
+    - run
+    - --execution-segment=0:1/6
+    - --execution-segment-sequence=0,1/6,2/6,3/6,4/6,5/6,1
+    - --out
+    - csv=/out/metrics.csv.gz
+    - /scripts/class.js
     resources:
-      requests: { cpu: "2", memory: 2Gi }   # no CPU limit; test 3 shows what a limit did
+      # no CPU limit; test 3 shows what a limit did
+      requests: { cpu: "2", memory: 2Gi }
     volumeMounts:
     - { name: scripts, mountPath: /scripts }
     - { name: tokens, mountPath: /tokens }
@@ -276,7 +306,8 @@ I fixed the regex first, then removed it so there's nothing left to get wrong. C
 
 ```yaml
 annotations:
-  nginx.ingress.kubernetes.io/upstream-hash-by: "$arg_g"   # hash on the ?g= query parameter
+  # hash on the ?g= query parameter
+  nginx.ingress.kubernetes.io/upstream-hash-by: "$arg_g"
 ```
 
 ---
@@ -306,8 +337,13 @@ Each pair of lines differs in one setting. The gap between the dashed and solid 
 I now check the load generator's throttling in every run:
 
 ```promql
-sum by (pod) (rate(container_cpu_cfs_throttled_periods_total{namespace="loadtest"}[1m]))
-  / sum by (pod) (rate(container_cpu_cfs_periods_total{namespace="loadtest"}[1m]))
+sum by (pod) (
+  rate(container_cpu_cfs_throttled_periods_total{namespace="loadtest"}[1m])
+)
+/
+sum by (pod) (
+  rate(container_cpu_cfs_periods_total{namespace="loadtest"}[1m])
+)
 ```
 
 ---
@@ -357,8 +393,10 @@ At first the API topped out around 230 requests a second. PostgreSQL was stuck a
 The load test showed that the API's CPU was full, but not which code was using it. I attached py-spy, a sampling profiler that reads a Python process's call stacks from outside, through an ephemeral debug container, while k6 held a steady 300 requests a second:
 
 ```bash
-kubectl debug pod/<api-pod> --image=python:3.12-slim --target=<api-container> --profile=general -- \
-  sh -c "pip install py-spy && py-spy record --pid 1 --subprocesses --nonblocking --duration 180 --format raw -o /tmp/profile.txt"
+kubectl debug pod/<api-pod> --image=python:3.12-slim \
+  --target=<api-container> --profile=general -- \
+  sh -c "pip install py-spy && py-spy record --pid 1 --subprocesses \
+    --nonblocking --duration 180 --format raw -o /tmp/profile.txt"
 ```
 
 The command writes the profile to a file. I lost my first profile by printing it to the container log instead: it was 12 MB, Kubernetes rotates container logs at 10 MiB, and the output was gone before I could copy it.
