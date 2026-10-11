@@ -2,41 +2,28 @@ import {themes as prismThemes} from 'prism-react-renderer';
 import type {Config} from '@docusaurus/types';
 import type * as Preset from '@docusaurus/preset-classic';
 
-// This runs in Node.js - Don't use client-side code here (browser APIs, JSX...)
-
 const config: Config = {
   title: 'Rayen Dhmaied',
   tagline: 'Cloud & DevOps Engineer',
   favicon: 'img/logo.png',
-  customFields:{
+  customFields: {
     github: 'rayen-dhmaied',
     linkedin: 'rayen-dhmaied',
     email: 'rayen.dhmaied@horizon-tech.tn',
-    bio: "I build and run cloud infrastructure, and write the backend that runs on it.",
-    phone: '+216 00 000 000',
+    bio: 'I build and run cloud infrastructure, and write the backend that runs on it.',
   },
 
-  // Future flags, see https://docusaurus.io/docs/api/docusaurus-config#future
   future: {
-    v4: true, // Improve compatibility with the upcoming Docusaurus v4
+    v4: true,
   },
 
-  // Set the production url of your site here
   url: 'https://rayen-dhmaied.github.io',
-  // Set the /<baseUrl>/ pathname under which your site is served
-  // For GitHub pages deployment, it is often '/<projectName>/'
   baseUrl: '/portfolio/',
+  organizationName: 'rayen-dhmaied',
+  projectName: 'portfolio',
 
-  // GitHub pages deployment config.
-  // If you aren't using GitHub pages, you don't need these.
-  organizationName: 'rayen-dhmaied', // Usually your GitHub org/user name.
-  projectName: 'portfolio', // Usually your repo name.
+  onBrokenLinks: 'throw',
 
-  onBrokenLinks: 'warn',
-
-  // Even if you don't use internationalization, you can use this field to set
-  // useful metadata like html lang. For example, if your site is Chinese, you
-  // may want to replace "en" with "zh-Hans".
   i18n: {
     defaultLocale: 'en',
     locales: ['en'],
@@ -49,7 +36,7 @@ const config: Config = {
         gtag: {
           trackingID: 'G-J1PJP1SJ02',
         },
-        docs: false, // Disable the default docs instance
+        docs: false,
         blog: {
           path: './content/blog',
           showReadingTime: true,
@@ -57,7 +44,6 @@ const config: Config = {
             type: ['rss', 'atom'],
             xslt: true,
           },
-          // Useful options to enforce blogging best practices
           onInlineTags: 'warn',
           onInlineAuthors: 'warn',
           onUntruncatedBlogPosts: 'warn',
@@ -72,7 +58,6 @@ const config: Config = {
     [
       '@docusaurus/plugin-content-docs',
       {
-        // id omitted => default instance
         path: './content/resume',
         routeBasePath: 'resume',
         sidebarPath: './sidebars/resume.ts',
@@ -116,7 +101,7 @@ const config: Config = {
         {
           to: '/blog',
           label: 'Blog',
-          position: 'right'
+          position: 'right',
         },
       ],
     },
