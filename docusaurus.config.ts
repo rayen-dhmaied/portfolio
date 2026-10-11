@@ -49,7 +49,7 @@ const config: Config = {
           onUntruncatedBlogPosts: 'warn',
         },
         theme: {
-          customCss: './src/css/custom.css',
+          customCss: ['./src/css/fonts.css', './src/css/custom.css'],
         },
       } satisfies Preset.Options,
     ],
@@ -76,7 +76,9 @@ const config: Config = {
   themeConfig: {
     image: 'img/social-card.png',
     colorMode: {
-      respectPrefersColorScheme: true,
+      defaultMode: 'dark',
+      disableSwitch: true,
+      respectPrefersColorScheme: false,
     },
     navbar: {
       title: "Rayen's Portfolio",
@@ -111,8 +113,8 @@ const config: Config = {
       copyright: `Copyright © ${new Date().getFullYear()} Built by Rayen Dhmaied.`,
     },
     prism: {
-      theme: prismThemes.github,
-      darkTheme: prismThemes.dracula,
+      theme: prismThemes.synthwave84,
+      darkTheme: prismThemes.synthwave84,
     },
   } satisfies Preset.ThemeConfig,
 };
