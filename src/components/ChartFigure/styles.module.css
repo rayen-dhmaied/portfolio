@@ -63,24 +63,3 @@ figure.chart {
   color: var(--dg-ink-2);
 }
 
-.data {
-  margin-top: 0.75rem;
-  font-size: 0.875rem;
-}
-
-.data summary {
-  cursor: pointer;
-  color: var(--dg-ink-2);
-}
-
-.tableWrap {
-  max-height: 320px;
-  margin-top: 0.5rem;
-  overflow: auto;
-}
-
-.tableWrap table {
-  margin: 0;
-  font-size: 0.8125rem;
-  font-variant-numeric: tabular-nums;
-}

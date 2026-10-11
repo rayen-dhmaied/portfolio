@@ -14,7 +14,6 @@ I wanted to know where QuizShip breaks before real traffic showed me, so I copie
 {/* Imports sit below the truncate marker so the blog list page doesn't bundle the figures */}
 
 import ChartFigure from '@site/src/components/ChartFigure';
-import tables from './img/tables.json';
 import K6Architecture from './img/architecture.svg';
 import StickyRouting from './img/sticky-routing.svg';
 import TestEnvironment from './img/test-environment.svg';
@@ -259,13 +258,13 @@ spec:
 
 The first ramp went after questions 1 and 2 with production's routing. I ramped from 320 classes to 960, which is 10,000 to 30,000 players.
 
-<ChartFigure table={tables['fanout-old-routing']}>
+<ChartFigure>
   <FanoutOldRouting />
 </ChartFigure>
 
 Fan-out was 7 ms at p95 with 10,000 players and 21 ms with 15,000. After that it climbed to 90 ms at 20,000 players and 458 ms at 30,000, just under the threshold. A curve that bends like that usually means a resource is running out, but the busiest node was only at 69% CPU. So I split the CPU graph by pod:
 
-<ChartFigure table={tables['cpu-per-game-pod']}>
+<ChartFigure>
   <CpuPerGamePod />
 </ChartFigure>
 
@@ -298,7 +297,7 @@ The 172 ms came from my test setup, not the servers. Every time a host clicked "
 
 I removed the limit, so the k6 pods could use the idle CPU on their nodes, and ran both routings again:
 
-<ChartFigure table={tables['routing-and-k6-2x2']}>
+<ChartFigure>
   <RoutingAndK6 />
 </ChartFigure>
 
@@ -317,7 +316,7 @@ sum by (pod) (rate(container_cpu_cfs_throttled_periods_total{namespace="loadtest
 
 Question 3 is about a single big game, so I ran single games of 100, 250 and 500 players, each with players joining over 60 seconds and 20 questions. Latency was fine: the last of 500 players got each question within about 30 ms. The problem was the amount of data sent to the players:
 
-<ChartFigure table={tables['bytes-per-game']}>
+<ChartFigure>
   <BytesPerGame />
 </ChartFigure>
 
@@ -335,7 +334,7 @@ Question 4 is about 9:00 at a school, so in this test each class created its gam
 
 The 240 classes, 7,200 players in total, joined with a p95 of 18 ms, and server CPU barely moved. The single-IP run showed a different problem. Game creation is limited to 20 games a minute per IP address, and teachers at the same school usually share one public IP. 18 of the 50 teachers waited more than a second for their game, and the last one waited 53 seconds:
 
-<ChartFigure table={tables['create-wait-one-ip']}>
+<ChartFigure>
   <CreateWaitOneIp />
 </ChartFigure>
 
@@ -347,7 +346,7 @@ The servers had capacity to spare. The wait came from a rule meant to block abus
 
 Question 5 is about the API, so I ran the API test, raising the arrival rate from 25 to 600 requests a second. Each time I fixed what limited the API, the ceiling moved:
 
-<ChartFigure table={tables['api-ceiling-steps']}>
+<ChartFigure>
   <ApiCeilingSteps />
 </ChartFigure>
 
@@ -372,7 +371,7 @@ So I moved the dashboard's counting into SQL. That cut the API's CPU per request
 
 The second half of question 5 had the worse answer. Every run that went past the ceiling collapsed instead of slowing down. This one had PostgreSQL at 1 core, so its ceiling was about 340 requests a second:
 
-<ChartFigure table={tables['overload-timeline']}>
+<ChartFigure>
   <OverloadTimeline />
 </ChartFigure>
 

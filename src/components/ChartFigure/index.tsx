@@ -5,11 +5,8 @@ import styles from './styles.module.css';
 // Shapes written by the chart generator
 type TipRow = [value: string, label: string, color: string | null, dashed: boolean];
 type Tip = {t: string; r: TipRow[]};
-type Table = {columns: string[]; rows: (string | number)[][]};
-
 type Props = {
   children: ReactNode;
-  table?: Table;
 };
 
 const parseTip = (el: Element): Tip | null => {
@@ -23,10 +20,9 @@ const parseTip = (el: Element): Tip | null => {
 const NEXT: Record<string, number> = {ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1};
 
 // Wraps an inline chart SVG: hit targets carrying data-tip get a tooltip on hover,
-// tap and keyboard focus, and the chart's data is available as a table. The chart
-// is one tab stop; arrow keys, Home and End move between its points, Escape hides
+// tap and keyboard focus. The chart is one tab stop; arrow keys, Home and End move between its points, Escape hides
 // the tooltip. Screen readers get each point's values from its aria-label.
-export default function ChartFigure({children, table}: Props): ReactNode {
+export default function ChartFigure({children}: Props): ReactNode {
   const figure = useRef<HTMLElement>(null);
   const plot = useRef<HTMLDivElement>(null);
   const [tip, setTip] = useState<{data: Tip; x: number; y: number; flip: boolean} | null>(null);
@@ -119,31 +115,6 @@ export default function ChartFigure({children, table}: Props): ReactNode {
             </div>
           ))}
         </div>
-      )}
-      {table && (
-        <details className={styles.data}>
-          <summary>Data table</summary>
-          <div className={styles.tableWrap}>
-            <table>
-              <thead>
-                <tr>
-                  {table.columns.map((c) => (
-                    <th key={c}>{c}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {table.rows.map((row, i) => (
-                  <tr key={i}>
-                    {row.map((cell, j) => (
-                      <td key={j}>{cell}</td>
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </details>
       )}
     </figure>
   );

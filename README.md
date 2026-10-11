@@ -75,7 +75,7 @@ The architecture diagrams on the project pages and the figures in the k6 blog po
 
 Pages import them as inline SVG, so their colors and fonts come from the `--dg-*` variables in `src/css/custom.css`: change those to restyle every diagram. Brand logos use the colors in `src/data/icons.json`, adjusted where the official color is too dark for the site's dark cards.
 
-Charts are wrapped in `<ChartFigure>` (`src/components/ChartFigure`), which adds hover and keyboard tooltips and a data table read from the post's `img/tables.json`. The chart series colors (`--dg-series-*`) were checked for color-blind safety as a set; check them again if you change them.
+Charts are wrapped in `<ChartFigure>` (`src/components/ChartFigure`), which adds hover and keyboard tooltips. The chart series colors (`--dg-series-*`) were checked for color-blind safety as a set; check them again if you change them.
 
 
 ## Deployment
