@@ -5,7 +5,7 @@ import type * as Preset from '@docusaurus/preset-classic';
 const config: Config = {
   title: 'Rayen Dhmaied',
   tagline: 'Cloud & DevOps Engineer',
-  favicon: 'img/logo.png',
+  favicon: 'img/logo-64.png',
   customFields: {
     github: 'rayen-dhmaied',
     linkedin: 'rayen-dhmaied',
@@ -81,8 +81,10 @@ const config: Config = {
     navbar: {
       title: "Rayen's Portfolio",
       logo: {
-        alt: 'Logo',
-        src: 'img/logo.png',
+        alt: 'Rayen Dhmaied',
+        src: 'img/logo-64.png',
+        width: 30,
+        height: 30,
       },
       items: [
         {
