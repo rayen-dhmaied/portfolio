@@ -5,6 +5,14 @@ authors: [rayen-dhmaied]
 tags: [k6, load-testing, websocket, api, kubernetes]
 ---
 
+QuizShip is a live quiz platform. A teacher hosts a game, students join from their phones, and a Go server sends each question to every player over a WebSocket. A Python API handles accounts, billing and the teacher's dashboard. Both run on Kubernetes.
+
+I wanted to know where QuizShip breaks before real traffic showed me, so I copied production into an isolated environment and ran six k6 tests against it. Claude Code helped me design the tests and analyze the data. This post covers what load testing is, how I wrote the tests in k6, including WebSocket tests that hold 30,000 connections, and what each test showed, mistakes included.
+
+{/* truncate */}
+
+{/* Imports sit below the truncate marker so the blog list page doesn't bundle the figures */}
+
 import ChartFigure from '@site/src/components/ChartFigure';
 import tables from './img/tables.json';
 import K6Architecture from './img/architecture.svg';
@@ -17,12 +25,6 @@ import BytesPerGame from './img/bytes-per-game.svg';
 import CreateWaitOneIp from './img/create-wait-one-ip.svg';
 import ApiCeilingSteps from './img/api-ceiling-steps.svg';
 import OverloadTimeline from './img/overload-timeline.svg';
-
-QuizShip is a live quiz platform. A teacher hosts a game, students join from their phones, and a Go server sends each question to every player over a WebSocket. A Python API handles accounts, billing and the teacher's dashboard. Both run on Kubernetes.
-
-I wanted to know where QuizShip breaks before real traffic showed me, so I copied production into an isolated environment and ran six k6 tests against it. Claude Code helped me design the tests and analyze the data. This post covers what load testing is, how I wrote the tests in k6, including WebSocket tests that hold 30,000 connections, and what each test showed, mistakes included.
-
-{/* truncate */}
 
 ## What Load Testing Is
 
