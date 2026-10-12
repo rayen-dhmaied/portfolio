@@ -1,34 +1,31 @@
 ---
 title: Professional Experience
-sidebar_position: 2
+sidebar_position: 1
 ---
 
 ### DevOps and Site Reliability Engineer
 **CraftSchoolship** · San Jose, Remote · **Oct 2023 - Present**
 
-:::note[Key Highlights]
+:::note[Highlights]
 
-- Cut AWS spend by **45%** with Karpenter autoscaling, FinOps analysis, rightsizing, and cleanup
-- Reduced **MTTR by 50%** with Grafana, Prometheus, Loki, runbooks, and on-call routing
-- Built a GitOps deployment platform for **20+ customer apps** across **3 AWS regions**
-- Automated **70%** of TOIL with Python, Bash, and GitHub Actions
-- Developed a live quiz platform handling **thousands** of concurrent players.
+- Cut AWS spend **45%** through FinOps analysis, rightsizing, cleanup of unused resources, and moving autoscaling from Cluster Autoscaler to Karpenter
+- Halved incident resolution time (MTTR) with an [observability stack](/projects/work-projects/observability) on Prometheus, Loki, and Grafana, a runbook on every alert, and an on-call rotation
+- Built [DeployCenter](/projects/work-projects/deploy-center), a GitOps platform that deploys **20+** customer apps and cut per-app deploys from 15 mins to 3
+- Led development of [QuizShip](/projects/work-projects/quizship), a live quiz platform [load-tested with k6](/blog/load-testing-quizship-with-k6) to **30,000** concurrent players
+- Automated **70%** of toil with Python, Bash, and GitHub Actions
 
 <details>
-<summary>View all responsibilities</summary>
+<summary>Show more</summary>
 
-- Cut AWS spend 45% by migrating autoscaling from Cluster Autoscaler to Karpenter, plus FinOps analysis, rightsizing, and cleanup of unused resources.
-- Reduced MTTR 50% by building a full observability stack (Prometheus, Loki, Grafana, Jaeger, Istio/Kiali) with external HTTPS probes, a runbook on every alert, and an on-call rotation.
-- Wrote modular Terraform and CloudFormation that stand up production-ready EKS clusters (IAM, networking, storage, add-ons) across 3 AWS regions in under 15 minutes, and migrated workloads between AWS accounts without downtime.
-- Administered and upgraded multi-tenant Kubernetes clusters, cleared recurring ArgoCD reconciliation and pod-eviction failures, and managed secrets, certificates, and IAM.
-- Developed a GitOps deployment platform for 20+ customer apps across 3 AWS regions using GitHub Actions, Helm, Argo CD, Python, React, and YAML config.
-- Implemented CI/CD pipelines for web and mobile apps with deploy notifications (lint, test, image build, deploy in under 5 minutes) and automated 70% of TOIL with Python and Bash CLI tools.
-- Tuned high-availability PostgreSQL (Patroni) clusters to lower resource use 35% and automated backup and restore of Kubernetes objects and EBS/EFS volumes for disaster recovery.
-- Replaced nginx-ingress with API gateway and tuned load balancing, DNS, CDN, and caching, cutting request latency about 40%; Istio handles mTLS between services.
-- Centralized authentication on Keycloak, putting internal tools behind one SSO account with role-based access, which cut employee onboarding time 70%.
-- Developed and operated backend services in Python and Go for authentication, user management, payments, and analytics, with async workers for background jobs, across customer-facing apps and internal platforms, including a live quiz platform handling thousands of concurrent players over sticky-routed WebSocket containers.
-- Built an auto-scaling, multi-AZ BigBlueButton video platform on AWS; built a preconfigured machine image (AMI) that cut instance launch from 11 minutes to 3, with scale-in protection for active meetings.
-- Developed Mattermost plugins and integrations, kept Grafana dashboards and alerting in sync across environments, and centralized team documentation and runbooks.
+- Wrote [modular Terraform](/blog/refactoring-terraform-into-modules) and CloudFormation that stand up EKS clusters (IAM, networking, storage, add-ons) in 3 AWS regions in under 15 minutes, and migrated workloads between AWS accounts without downtime.
+- Upgraded and ran multi-tenant Kubernetes clusters, and fixed recurring ArgoCD reconciliation and pod-eviction failures.
+- Built CI/CD pipelines for web and mobile apps that lint, test, build, and deploy in under 5 minutes.
+- Tuned high-availability PostgreSQL (Patroni) clusters to use 35% fewer resources, and automated backup and restore of Kubernetes objects and EBS/EFS volumes.
+- Replaced nginx-ingress with an API gateway and tuned load balancing, DNS, CDN, and caching, cutting request latency about 40%.
+- Moved internal tools behind Keycloak single sign-on with role-based access, which cut employee onboarding time 70%.
+- Built both QuizShip backend services, a Go game server for live games and a Python API for accounts, Stripe billing, LMS integration (LTI 1.3), and AI quiz generation.
+- Wrote most of [HR System Hub](/projects/work-projects/hr-system-hub), a serverless HR platform on Firebase for a manufacturing client, in a team of three, including its 1,400+ tests.
+- Built an auto-scaling, multi-AZ [BigBlueButton video platform](/projects/work-projects/scalable-bbb-aws) on AWS, with a custom machine image (AMI) that cut server launch from 11 minutes to 3 and scale-in protection for live meetings.
 
 </details>
 
@@ -39,20 +36,11 @@ sidebar_position: 2
 ### Software Developer Intern
 **Box2Home** · Sousse, Hybrid · **Feb 2023 - June 2023**
 
-:::note[Key Highlights]
+:::note[Highlights]
 
-- Built an internal data platform that replaced a paid third-party tool
-- Exposed **100+ SQL tables** through NestJS, React, Prisma, and role-based access
-
-<details>
-<summary>View all responsibilities</summary>
-
-- Built an internal platform (NestJS, React, Prisma, Material UI) that let developers browse and query data for debugging without connecting to the database directly or writing SQL, replacing a paid third-party tool.
-- Exposed 100+ production tables through a role-based web interface.
-- Added an audit trail logging every query and data operation with user and timestamp.
-- Deployed the frontend and backend with Docker on AWS ECS, with logs in CloudWatch.
-
-</details>
+- Built an [internal data platform](/projects/side-projects/internal-data-platform) (NestJS, React, Prisma) that let developers query **100+** production tables without direct database access, replacing a paid third-party tool
+- Added role-based access and an audit trail that logs every query with its user and timestamp
+- Deployed both services with Docker on AWS ECS, with logs in CloudWatch
 
 :::
 
@@ -61,18 +49,9 @@ sidebar_position: 2
 ### IT Operations Intern
 **DRÄXLMAIER Group** · Sousse, On-site · **Sept 2022 - Oct 2022**
 
-:::note[Key Highlights]
+:::note[Highlights]
 
-- Built a Python CLI for switch diagnostics and Excel reporting
-- Supported IT asset setup, activation, and warehouse interventions
-
-<details>
-<summary>View all responsibilities</summary>
-
-- Built a Python CLI that pulls data from HP network switches and exports Excel reports for local network troubleshooting.
-- Supported warehouse interventions, including IT asset setup and activation across sites.
-- Installed network cabling and managed IT assets.
-
-</details>
+- Built a Python CLI that pulls data from HP network switches and exports Excel reports for network troubleshooting
+- Set up IT equipment across sites and installed network cabling
 
 :::
