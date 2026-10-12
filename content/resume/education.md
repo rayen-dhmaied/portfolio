@@ -6,10 +6,10 @@ sidebar_position: 3
 ### Master of Computer Science
 **Horizon School of Digital Technologies** · **2023 - 2025**
 
-:::note[Key Highlights]
+:::note[Highlights]
 
 - **Major**: DevOps and Site Reliability Engineering
-- Graduated as valedictorian
+- Graduated top of class
 
 <details>
 <summary>View studied subjects</summary>
@@ -34,7 +34,7 @@ sidebar_position: 3
 ### Bachelor of Computer Science
 **Higher Institute of Informatics and Mathematics of Monastir** · **2020 - 2023**
 
-:::note[Key Highlights]
+:::note[Highlights]
 
 - **Major**: Software Engineering and Information Systems
 
