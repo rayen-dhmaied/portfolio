@@ -7,7 +7,7 @@ tags: [k6, load-testing, websocket, api, kubernetes]
 
 QuizShip is a live quiz platform. A teacher hosts a game, students join from their phones, and a Go server sends each question to every player over a WebSocket. A Python API handles accounts, billing and the teacher's dashboard. Both run on Kubernetes.
 
-I wanted to know where QuizShip breaks before real traffic showed me, so I copied production into an isolated environment and ran six k6 tests against it. Claude Code helped me design the tests and analyze the data. This post covers what load testing is, how I wrote the tests in k6, including WebSocket tests that hold 30,000 connections, and what each test showed, mistakes included.
+I wanted to know where QuizShip breaks before real traffic showed me, so I copied production into an isolated environment and ran six k6 tests against it. Claude Code helped me design the tests and analyze the data. This post covers what load testing is and how I wrote the tests in k6, including WebSocket tests that hold 30,000 connections. Then it goes through what each test showed, the mistakes I made, and what that load costs on AWS.
 
 {/* truncate */}
 
@@ -24,12 +24,13 @@ import BytesPerGame from './img/bytes-per-game.svg';
 import CreateWaitOneIp from './img/create-wait-one-ip.svg';
 import ApiCeilingSteps from './img/api-ceiling-steps.svg';
 import OverloadTimeline from './img/overload-timeline.svg';
+import CostPerHour from './img/cost-per-hour.svg';
 
 ## What Load Testing Is
 
 Load testing means sending more traffic to a system than it gets today, on purpose and to a copy of production, to see how it behaves before real users bring that traffic.
 
-A load test starts with questions, and the system's architecture suggests them: what holds state, what every request depends on, how big a single unit can get, when the busiest moment is, and what happens past the limit.
+It works best with a question behind each test. A load test throws off a lot of numbers, and the question is what tells you which ones to look at and what result is good enough. The questions usually come from the same places: what holds state, what every request depends on, the biggest single unit, the busiest moment, what happens past the limit, and what it all costs.
 
 ---
 
@@ -44,7 +45,7 @@ QuizShip runs on a Kubernetes cluster on AWS (EKS). Each service is a Kubernetes
 - **ingress-nginx** receives all traffic from outside the cluster. Paths under `/game` go to the game pods and paths under `/store` go to the API pods.
 - **Game Deployment, 2 pods (Go).** Runs live games over WebSockets.
 - **API Deployment, 2 pods (Python, Flask on gunicorn).** Accounts, billing, the quiz library and the dashboard.
-- **Redis** holds game snapshots, the API's cache, rate limits and the job queue. **PostgreSQL** holds the API's data. A **Celery worker** runs background jobs such as emails.
+- **Redis** holds a copy of every live game, called its snapshot, plus the API's cache, rate limits and the job queue. **PostgreSQL** holds the API's data. A **Celery worker** runs background jobs such as emails.
 
 The game servers call the API twice per game: to check the teacher's plan when a game is created, and to save the result when it ends.
 
@@ -54,19 +55,20 @@ API requests are stateless, so the ingress sends them to the API pods in turn. G
   <StickyRouting />
 </figure>
 
-Each game pod also saves its games to Redis. If a pod restarts, its players reconnect to another pod, which restores the game from Redis.
+Each game pod keeps those snapshots up to date as its games are played. If a pod restarts, its players reconnect to another pod, which restores each game from its snapshot.
 
 ---
 
 ## The Questions I Started From
 
-I wrote the questions down before writing any test script, so each test would have something to measure against. Asking the questions from the previous section about this architecture gave five:
+For QuizShip, that gave me six questions:
 
-1. **Does the load balancing spread the games?** A game lives on one pod, so if every game lands on the same pod, adding game pods adds no capacity. Tests 1 to 3 answer this.
-2. **How many players can play at once before they notice?** "Notice" needs a number, so I set one: 95% of players get the next question within 500 ms of the host's click. Tests 1 to 3 answer this too.
-3. **What does the biggest game cost?** The largest plan allows 500 players in one game, and all of them land on one pod. Test 4 answers this.
-4. **What happens when everyone starts at once?** Classes start at the same time, so games are created in a burst at 9:00, not spread over the day. Test 5 answers this.
-5. **How much dashboard traffic can the API serve, and what happens past that?** Every new game needs the API's plan check, so if the API goes down, no class can start. Test 6 answers this.
+1. **Does the load balancing spread the games?** A game lives on one pod, so if every game lands on the same pod, adding game pods adds no capacity.
+2. **How many players can play at once before they notice?** "Notice" needs a number, so I set one: 95% of players get the next question within 500 ms of the host's click.
+3. **What does the biggest game cost?** The largest plan allows 500 players in one game, and all of them land on one pod.
+4. **What happens when everyone starts at once?** Classes start at the same time, so games are created in a burst at 9:00, not spread over the day.
+5. **How much dashboard traffic can the API serve, and what happens past that?** Every new game needs the API's plan check, so if the API goes down, no class can start.
+6. **What does peak load cost on AWS?** QuizShip shares its nodes with other workloads, so the AWS bill doesn't show it.
 
 ---
 
@@ -224,13 +226,13 @@ The test teachers had 25 quizzes each and between 70 and 190 played games left b
   <TestEnvironment />
 </figure>
 
-Each service had a node to itself, while production shares nodes with other workloads, so these numbers are a best case. The cloud load balancer in front of production wasn't in the path, and neither was the internet between a phone and AWS, so every latency in this post is measured inside the cluster.
+Each service had a node to itself, while production shares nodes with other workloads and runs an Istio sidecar beside every pod, so these numbers are a best case. The cloud load balancer in front of production wasn't in the path, and neither was the internet between a phone and AWS, so every latency in this post is measured inside the cluster.
 
 Prometheus already scraped every pod and node in the cluster. After each run, a script pulled CPU and memory per pod, CPU throttling, Redis operations and network bytes for the run's time window, so I could read k6's numbers and the servers' side by side.
 
 ### Running k6 in the Cluster
 
-k6 ran inside the cluster as plain Kubernetes pods, started by a short shell script rather than the k6 operator. One k6 process can't open 30,000 connections, so the script splits a test into six slices with k6's execution segments and starts one pod per slice. Each pod:
+k6 ran inside the cluster as plain Kubernetes pods, started by a short shell script rather than the k6 operator, Grafana's Kubernetes controller for distributed k6 runs. One k6 process can't open 30,000 connections, so the script splits a test into six slices with k6's execution segments and starts one pod per slice. Each pod:
 
 - runs the official `grafana/k6` image, with the test script mounted from a ConfigMap and the test teachers' tokens from a Secret;
 - lands on the test node pool, on a node where no pod of the system under test runs, so k6 never takes CPU from what it measures;
@@ -316,7 +318,7 @@ annotations:
 
 With the fix, the two pods split the load within 10% of each other. Fan-out stayed at 15 ms or less up to 25,000 players, then jumped to 172 ms at 30,000.
 
-I assumed I had found the next limit and went looking for it. Game node CPU peaked at 43%. The largest network flow was the snapshots going into Redis, 360 Mbps, far below what the node can carry, and Redis isn't on the fan-out path anyway, since the game sends a question before it saves the snapshot. No server-side resource was close to full.
+I assumed I had found the next limit and went looking for it. Game node CPU peaked at 43%. The largest network flow was the snapshots going into Redis, about 300 Mbps, far below what the node can carry, and Redis isn't on the fan-out path anyway, since the game sends a question before it saves the snapshot. No server-side resource was close to full.
 
 That left the ingress or k6 itself. In tests 1 and 2, each k6 pod had a CPU limit of 0.6 cores. Kubernetes enforces a CPU limit in 100 ms periods: once a container has used its share of a period, it is paused until the next one, which is called throttling. Test 1's metrics showed the k6 pods throttled in 7% of their periods on average and in up to 52% during bursts, and test 2 used the same k6 setup.
 
@@ -332,7 +334,9 @@ I removed the limit, so the k6 pods could use the idle CPU on their nodes, and r
   <RoutingAndK6 />
 </ChartFigure>
 
-Each pair of lines differs in one setting. The gap between the dashed and solid lines is what the k6 limit added, and the gap between the two colors is the routing fix. With the old routing, the rerun had test 1's shape a little lower, 64 ms at 20,000 players and 413 ms at 30,000, so test 1's conclusion held. With the routing fixed and k6 unlimited, 30,000 players got the next question in 13 ms at p95, measured inside the cluster, and each game pod used 1.3 to 1.4 of its 4 cores. That answered question 2 as far as the test environment could go: 30,000 players was the most it could generate, so I still don't know where the game servers' limit is.
+Each pair of lines differs in one setting. The gap between the dashed and solid lines is what the k6 limit added, and the gap between the two colors is the routing fix. With the old routing, the rerun had test 1's shape a little lower, 64 ms at 20,000 players and 413 ms at 30,000, so test 1's conclusion held. With the routing fixed and k6 unlimited, 30,000 players got the next question in 13 ms at p95, measured inside the cluster, with no errors, and each game pod used 1.3 to 1.4 of its 4 cores. That answered question 2 as far as the test environment could go: 30,000 players was the most it could generate, so I still don't know where the game servers' limit is.
+
+The game servers had that headroom because of how the Go code is built. Each game is a single goroutine that receives players' answers over a channel, so game state needs no mutexes, and the 960 games in this test ran in parallel without lock contention. Each WebSocket also has its own reader and writer goroutines, so a slow phone gets reconnected instead of holding up its class.
 
 I now check the load generator's throttling in every run:
 
@@ -390,7 +394,7 @@ At first the API topped out around 230 requests a second. PostgreSQL was stuck a
 
 ### Profiling the API
 
-The load test showed that the API's CPU was full, but not which code was using it. I attached py-spy, a sampling profiler that reads a Python process's call stacks from outside, through an ephemeral debug container, while k6 held a steady 300 requests a second:
+The load test showed that the API's CPU was full, but not which code was using it. I attached py-spy, a sampling profiler that reads a Python process's call stacks from outside, through a temporary debug container that `kubectl debug` adds to the running pod, while k6 held a steady 300 requests a second:
 
 ```bash
 kubectl debug pod/<api-pod> --image=python:3.12-slim \
@@ -413,9 +417,47 @@ The second half of question 5 had the worse answer. Every run that went past the
   <OverloadTimeline />
 </ChartFigure>
 
-At 400 requests a second, completed requests flattened around 300, and the p95 of the requests that did get answered went from 50 ms to 10 to 20 seconds. Each API pod handles 32 requests at a time (4 gunicorn workers with 8 threads each) and queues the rest. The Kubernetes liveness probe waited in that same queue with a 1-second timeout, so Kubernetes concluded the pods were dead and restarted them, 13 times in ten minutes. Each restart dropped the requests that pod was handling and pushed its traffic onto the other pod.
+At 400 requests a second, completed requests flattened around 300, and the p95 of the requests that did get answered went from 50 ms to 10 to 20 seconds. Each API pod handles 32 requests at a time (4 gunicorn workers with 8 threads each) and queues the rest. Kubernetes checks that each pod is alive with a liveness probe, a health-check request it sends at regular intervals, and restarts the pod when the probe fails. That probe waited in the same queue with a 1-second timeout, so Kubernetes concluded the pods were dead and restarted them, 13 times in ten minutes. Each restart dropped the requests that pod was handling and pushed its traffic onto the other pod.
 
 A more patient probe didn't help. In another run I gave it 60 seconds, and the pods still restarted, just later, because under overload every request waits longer than any timeout, the probe included. The probe needs to answer without queueing behind requests, and the API should turn away extra requests quickly with a 429 or 503 instead of queueing them.
+
+---
+
+## What 30,000 Players Cost
+
+QuizShip shares its nodes with other workloads, so the AWS bill doesn't show what it costs at peak. To answer question 6, I priced what test 3's run used during its six minutes at 30,000 players, at AWS's on-demand prices in us-west-2:
+
+| item | used per hour | AWS price | cost per hour |
+|---|---|---|---|
+| game snapshots between the game pods and Redis, crossing zones | 145 GB | $0.02 per GB | $2.89 |
+| questions and results sent to phones | 15.2 GB | $0.09 per GB | $1.37 |
+| traffic from the load balancer to the game pods, crossing zones | 9.2 GB | $0.02 per GB | $0.18 |
+| network load balancer capacity | 18 capacity units | $0.006 per unit | $0.11 |
+| compute for the game pods, Redis and the ingress | 3.3 vCPUs, 5.7 GiB | $0.029 per vCPU, $0.0032 per GiB | $0.11 |
+| **total** | | | **$4.66** |
+
+The usage figures are Prometheus averages over those six minutes, converted from megabits per second to gigabytes per hour. An AWS region is split into availability zones, which are separate data centers, and traffic between them costs $0.01 per GB on each side, so $0.02 for every GB that crosses. In production, Redis runs in a different zone from both game pods, so every snapshot crosses, and about half the traffic from the load balancer to the game pods does too. AWS bills the network load balancer in capacity units, about one for every GB it processes in an hour. For CPU and memory, I split the price of a t3.xlarge instance ($0.1664 an hour for 4 vCPUs and 16 GiB) in the same ratio as Fargate, AWS's serverless container service, which prices CPU and memory separately.
+
+Snapshots were 62% of the cost, and compute about 2%. Each game rewrote its whole snapshot, about 35 KB, after nearly every answer. At 30,000 players that came to about 1,000 writes a second. Test 2 had already shown snapshots as the largest network flow, and pricing the run showed they were also the most expensive.
+
+### Cutting the Snapshot Traffic
+
+Version 1.14.0 of the game server gzips each snapshot, which makes it about 5 times smaller, and writes it to Redis at most once every 2 seconds per game instead of after nearly every answer.
+
+I played the same class, 30 students over 3 questions, through the old and the new server on my machine:
+
+| one class, 3 questions | before | after |
+|---|---|---|
+| bytes sent to Redis | 757,732 | 55,258 |
+| snapshot writes | 157 | 35 |
+
+Snapshot traffic fell by 93%. Applied to test 3's traffic, that takes snapshots from $2.89 to $0.26 an hour, and the whole cost at 30,000 players from $4.66 to $2.03:
+
+<ChartFigure>
+  <CostPerHour />
+</ChartFigure>
+
+The trade-off is that a pod that crashes, instead of shutting down cleanly, can lose up to 2 seconds of play.
 
 ---
 
@@ -427,4 +469,28 @@ A more patient probe didn't help. In another run I gave it 60 seconds, and the p
 | 2. How many players at once within 500 ms? | 30,000 at 13 ms on two pods, the most the environment could generate (test 3); with the old routing, 413 ms at 30,000 | the routing fix; k6 now runs without a CPU limit |
 | 3. What does the biggest game cost? | 2.6 GB sent to 500 players (test 4) | 36 MB, with the player list and leaderboard sent to the host only |
 | 4. What happens when everyone starts at once? | 7,200 players joined at 18 ms p95; teachers behind one IP waited up to 53 s (test 5) | the per-IP limit needs to count per teacher |
-| 5. How much API traffic, and what happens past it? | about 230, then 340, then 500 requests a second; past that, the health probe restarted the pods (test 6) | PostgreSQL's CPU limit and the dashboard cache are in production; the probe and load shedding need to change |
+| 5. How much API traffic, and what happens past it? | about 230, then 340, then 500 requests a second; past that, the health probe restarted the pods (test 6) | PostgreSQL's CPU limit and the dashboard cache are in production; the probe needs to stop queueing behind requests, and the API needs to turn away extra requests |
+| 6. What does peak load cost on AWS? | $4.66 an hour at 30,000 players, over 60% of it snapshots crossing zones to Redis (test 3, priced) | snapshots gzipped and written at most every 2 seconds: about $2.03 an hour |
+
+---
+
+## A Note on ingress-nginx
+
+Every request in these tests went through ingress-nginx, which has been retired: its best-effort maintenance ended in March 2026, and the Kubernetes project now points users to the Gateway API. QuizShip is moving to it.
+
+The game routing has to survive the move, and test 1 showed how quietly a broken hash key fails. The Gateway API standard defines sticky sessions only by cookie or header, but its implementations go further. Envoy Gateway can hash on a query parameter through its BackendTrafficPolicy, and Istio, which already runs in our cluster, does it with a DestinationRule:
+
+```yaml
+apiVersion: networking.istio.io/v1
+kind: DestinationRule
+metadata:
+  name: quizship-game
+spec:
+  host: quizship-game
+  trafficPolicy:
+    loadBalancer:
+      consistentHash:
+        httpQueryParameterName: g
+```
+
+Clients keep sending `?g=`, so nothing changes on their side. Istio's documentation warns that locality load balancing, which prefers pods in the caller's own zone, can break consistent hashing, which matters here because the game pods run in different zones.
