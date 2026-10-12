@@ -2,7 +2,7 @@
 title: HR System Hub - Serverless HR Platform for Manufacturing
 sidebar_position: 5
 tags: [TypeScript, React, Firebase, Cloud Functions, Firestore, Firebase Auth, Cloud Storage, Cloud Scheduler, Express, TanStack Query, Tailwind, PDFKit, Vitest, GitHub Actions, Claude Code, i18n]
-description: Contract-delivered HR platform that replaced a factory's paper evaluation process. Serverless on Firebase with EU data residency, about 120 API endpoints, and 1,400+ tests.
+description: HR platform that replaced a manufacturing client's paper employee evaluations. Lead contributor on a three-engineer contract team. Serverless on Firebase in EU regions, about 120 API endpoints, and 1,400+ tests.
 ---
 
 import Architecture from './images/architecture.svg';
@@ -10,26 +10,25 @@ import Architecture from './images/architecture.svg';
 ## Overview
 
 ### What it is
-An HR platform for a manufacturing client, delivered under a UNIDO Industry 4.0 program. It replaces the paper evaluation form FOR-029-EN-A and the Excel files around it with a full digital cycle: self-assessment, manager review, HR validation, e-signatures, and an archived PDF report. Training plans, leave requests, and attendance tracking ship as optional modules behind configuration flags.
+HR System Hub is an HR platform that a team of three engineers built under contract for a single-plant manufacturer. The project was part of an Industry 4.0 (factory digitalization) program run by UNIDO, the United Nations Industrial Development Organization. It replaces the client's paper evaluation form and the Excel files around it. Employees write a self-assessment, their manager reviews it, HR validates it, and after e-signatures the platform archives the evaluation as a PDF report.
 
-The platform runs on Firebase end to end. Hosting serves the React SPA and rewrites `/api/**` to an Express app on Cloud Functions Gen 2. Firestore holds the data, Firebase Auth carries identity with a role custom claim, Cloud Storage archives the PDF reports, and Cloud Scheduler drives the daily reminder job.
-
-Three engineers built it. I was the lead contributor with about 380 of the 645 commits: the evaluation workflow features, the UI rework, the French/English/Arabic i18n, the PDF report engine, the 1,400-case test campaign, and the CI/CD pipelines. Claude Code was part of my toolchain throughout, for test generation, refactors, and review passes; every change still landed through PR review.
+I was the lead contributor, with about 380 of the team's 645 commits. My parts were the evaluation workflow, the UI rework, the French, English, and Arabic translations, the PDF report engine, the 1,400-case test suite, and the CI/CD pipelines. I used Claude Code, an AI coding assistant, for test generation, refactoring, and review passes, and every change still went through pull request review.
 
 ### Why it exists
-The client ran HR on paper and scattered spreadsheets. An evaluation cycle meant printing a form per employee, scoring by hand, chasing signatures across the plant, and filing the result in a cabinet. Documents got lost, cycles dragged, and HR had no way to answer questions like "what share of the workforce has a closed evaluation this year."
+The client ran HR on paper and spreadsheets. Each evaluation cycle meant printing a form per employee, scoring it by hand, collecting signatures on paper, and filing it in a cabinet. Forms got lost and cycles were slow. HR also could not answer questions such as what share of the workforce had a closed evaluation that year.
 
-We shipped it as a managed SaaS on serverless components: nothing for a single-plant client to patch, scale, or restore, and a bill that tracks usage. Employee evaluations are personal data under a European program, so every resource is pinned to EU regions and CI refuses a deploy that would place a function outside the EU. The contract committed to the evaluation module alone while the spec described four modules, so training, leave, and attendance sit behind flags and each deployment turns on what the client bought.
+We delivered it as a managed service on serverless Firebase, so the client has no servers to maintain and the cost follows usage. Employee evaluations are personal data and the program is European, so we built the platform to comply with the GDPR, the EU data protection law. Every resource runs in an EU region, and the CI pipeline fails any deploy that would place a function elsewhere.
+
+The contract covered only the evaluation module, one of four in the spec. The other three (training plans, leave requests, and attendance tracking) are built as optional modules behind configuration flags, so each deployment turns on only the modules the client paid for.
 
 ### Outcome
 
 :::tip[Key Results]
-- Replaced the client's paper evaluation cycle end to end: state machine, e-signatures, HR validation, and an archived PDF per approved evaluation
-- About 120 REST endpoints on serverless Firebase, pinned to EU regions; Firestore rules deny client writes, so the audited API is the only write path
-- Scoring engine enforces the group HR standard: objective results capped at 150, weights that must sum to 100%, 3 to 6 objectives per evaluation
-- French, English, and Arabic UI with full right-to-left support
-- 1,400+ test cases across 51 files, run on every PR
-- PR preview channels, auto-deploy to staging, and production gated behind manual approval
+- Replaced the client's paper evaluation cycle, from self-assessment to an archived PDF report for each approved evaluation
+- About 120 REST API endpoints on serverless Firebase, all in EU regions
+- The server enforces the scoring rules set by the client's parent group, so HR no longer checks them by hand
+- French, English, and Arabic interface, with right-to-left layout for Arabic
+- 1,400+ test cases in 51 test files run on every pull request
 :::
 
 ---
@@ -41,18 +40,16 @@ We shipped it as a managed SaaS on serverless components: nothing for a single-p
 </figure>
 
 :::info[Architecture Overview]
-The SPA signs in through the Firebase Auth SDK and sends an ID token with every request. Hosting rewrites `/api/**` to the Express app, where middleware verifies the token, reads the role claim, and loads the caller's profile before any handler runs. Handlers use the Admin SDK; Firestore and Storage rules block direct client access, so every mutation flows through the audited API. Downloads go through signed URLs with a 15-minute TTL, and a scheduled function sweeps for stale evaluations every 24 hours.
+The React single-page app signs users in with Firebase Auth and sends their ID token with every request. Firebase Hosting rewrites `/api/**` to an Express API on Cloud Functions (2nd gen), where middleware verifies the token, reads the user's role from a custom claim, and loads their profile before any handler runs. Firestore and Storage security rules block direct client access, so every change goes through the audited API. File downloads use signed URLs that expire after 15 minutes, and Cloud Scheduler triggers a stale-evaluation sweep every 24 hours.
 :::
 
 ---
 
 ## Implementation Highlights
 
-- A scheduled function finds evaluations stuck in each workflow state past a configurable threshold and reminds the employee, the evaluator, or HR, with a cooldown against repeat pings.
-- Training plans follow a tripartite chain: manager approves relevance, HR approves budget, the employee acknowledges. The generic update endpoint refuses status jumps so every transition passes its dedicated guard, and a cold-review job flags trainings completed 3 to 6 months ago for an effectiveness rating in the next evaluation.
-- Leave balances follow the Tunisian labor code (18 days per year, 9-day carryover cap). HR approval deducts the balance and writes the matching attendance codes into the monthly grid, skipping weekends.
-- Roles live as Firebase Auth custom claims mirrored in the user documents; org-chart scoping keeps managers inside their own reporting line, and an immutable audit log records each privileged action with a structured old/new diff, the actor, and the client IP.
-- Merges to main auto-deploy to staging, production requires a manual run gated by a GitHub Environment, and every PR gets a preview channel. Operational workflows (demo seeding, data backfills) demand a typed confirmation token, and the deploy pipeline verifies region placement before shipping.
+- The daily sweep finds evaluations that have waited at one step past a configurable threshold and reminds whoever has to act next (the employee, the evaluator, or HR), with a cooldown against repeat reminders.
+- Managers can only access the records of employees in their own reporting line, and an immutable audit log records each privileged action with the old and new values, the actor, and the client IP.
+- In the CI/CD pipelines I built, every pull request gets a preview site, merges to main deploy to staging, and production deploys need manual approval through a GitHub Environment. Operational jobs such as demo seeding and data backfills require a typed confirmation token.
 
 ---
 
@@ -60,34 +57,34 @@ The SPA signs in through the Firebase Auth SDK and sends an ID token with every 
 
 ### Challenge 1: Relational HR Workflows on a Document Store
 
-**Problem:** Evaluations reference employees, evaluators, and a competency catalog; managers query their queue and HR queries campaign-wide stats. Firestore offers no joins, and a normalized model would mean N+1 reads per list view. Worse, referencing live employee documents would silently rewrite history: change someone's team and every past evaluation would follow.
+**Problem:** Evaluations reference employees, evaluators, and a competency catalog. Managers list their review queue, and HR queries statistics across an evaluation campaign. Firestore has no joins, so a normalized model would cost one extra read per row in every list view (the N+1 query problem). Pointing evaluations at the live employee record would also change past evaluations whenever someone moved teams.
 
-**Solution:** I modeled around access paths instead of entities. Each evaluation embeds a snapshot of the employee's profile at creation, so history reads one document and stays faithful to the interview date. Composite indexes back the two hot queries: employee history ordered by creation, and the manager queue filtered by status. Notifications live as a per-user subcollection, so the recipient is the hierarchy rather than a duplicated field, and a collection-group index lets the reminder job check its cooldown without scanning.
+**Solution:** I designed the data model around how each screen reads data. Each evaluation embeds a snapshot of the employee's profile from when it was created, so the history view reads one document and shows the profile as it was then. Composite indexes serve the two most frequent queries, an employee's history by creation date and a manager's queue by status.
 
 :::success[Result]
-List views read a fixed number of documents regardless of org size, and approved evaluations stay historically accurate through reorganizations.
+List views read a fixed number of documents regardless of org size, and past evaluations stay accurate after a reorganization.
 :::
 
 ---
 
 ### Challenge 2: Turning a Paper Form into Rules a Server Enforces
 
-**Problem:** The paper process accepted anything: objective weights that never summed to 100%, scores past the cap, evaluations signed before the employee saw them, edits after signing. A digital copy without enforcement would have carried those habits over.
+**Problem:** The paper form could not stop errors. Objective weights did not always sum to 100%, scores went past the cap, and evaluations were signed before the employee saw them or edited after signing.
 
-**Solution:** I encoded the form's rules as server-side guards. The state machine refuses out-of-order transitions. The scoring module caps objective results at 150 and rejects weight totals other than 100%. The objective-count rule (3 to 6, minimum one for production staff) blocks creation and update alike. Signatures are write-once, approved evaluations are read-only, and the one escape hatch, an admin unlock, writes an audit entry. Each rule carries the requirement ID from the spec (EVAL-001 through EVAL-012), so commits trace back to the clause that demanded them.
+**Solution:** I wrote the form's rules as checks in the API. Each evaluation is a state machine with a fixed order of steps, and the server rejects any step taken out of order. The scoring module caps objective results at 150 and rejects weights that do not total 100%. Creation and update both enforce the objective count (3 to 6, with a minimum of one for production staff). Signatures are write-once and approved evaluations are read-only. An admin unlock, which writes an audit entry, is the only way to reopen one. Each rule carries its requirement ID from the spec (EVAL-001 to EVAL-012), so the commits for each rule trace back to the clause that required it.
 
 :::success[Result]
-HR validates evaluations instead of policing them. The client audits the delivery against the spec by grepping requirement IDs through the git history.
+HR only sees evaluations that already pass the form's rules. The client audits the delivery against the spec by searching the git history for requirement IDs.
 :::
 
 ---
 
-### Challenge 3: A Faithful PDF of the Group Form in PDFKit
+### Challenge 3: Matching the Parent Group's Form in PDFKit
 
-**Problem:** HR files the evaluation report, so the generated PDF had to match the form their group headquarters owns. PDFKit offers no table layout: long French labels wrapped across row borders, the draft watermark covered content, and signature blocks split across page breaks.
+**Problem:** HR files the generated PDF in place of the paper form, so it had to match the layout set by the parent group's headquarters. PDFKit, a Node.js PDF library, has no table layout. Long French labels wrapped across row borders, the draft watermark covered content, and signature blocks split across page breaks.
 
-**Solution:** I built the layout engine around measurement before drawing. Each row measures its wrapped text and sizes itself first, so borders follow content. The BROUILLON watermark draws as a rotated page background and shrinks to fit A4 instead of bleeding off it. The signature block moves as one unit to the next page when it would split. Signatures embed as PNGs decoded from the data URLs captured in the app.
+**Solution:** I wrote the layout engine to measure content before drawing it. Each table row measures its wrapped text and sets its height first, so borders fit the content. The BROUILLON ("draft" in French) watermark is a rotated page background scaled to fit A4. A signature block that would split moves to the next page as one unit.
 
 :::success[Result]
-Approved evaluations archive as versioned PDFs on Cloud Storage that HR files in place of the paper form. Drafts stream with the watermark so nobody mistakes a preview for a signed report.
+Approved evaluations are archived as versioned PDFs in Cloud Storage. Draft previews carry the watermark, so nobody mistakes one for a signed report.
 :::
