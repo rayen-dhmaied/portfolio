@@ -115,8 +115,8 @@ Wrong local subscription state is fixed on the next Stripe event for that custom
 
 **Problem:** Each format has its own JSON shape and rules, such as answer counts, fields that must agree, and values that must stay hidden from players. A reply can pass a JSON schema and still be unplayable or padded with placeholder text.
 
-**Solution:** Generation runs on Claude with structured output, which makes each reply follow the format's JSON schema, so every reply parses. A per-format validator checks the rules a schema can't express and catches placeholder text. If validation fails and the time budget allows, the service sends Claude the exact problems for one repair round. Input is a text prompt or a PDF, and the system prompt shared by all formats is cached.
+**Solution:** Generation runs on Claude with structured output, which makes each reply follow the format's JSON schema, so every reply parses. A per-format validator checks the rules a schema can't express and catches placeholder text. If validation fails and the time budget allows, the service sends Claude the exact problems for up to two repair rounds, and only the failing questions are rewritten. Input is a text prompt or a PDF, and the system prompt shared by all formats is cached.
 
 :::success[Result]
-A draft that still fails after the repair round returns an error and costs the host no quota. Its token cost still counts toward the plan's margin.
+A draft that still fails after two repair rounds returns an error and costs the host no quota. Its token cost still counts toward the plan's margin.
 :::

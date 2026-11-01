@@ -142,6 +142,7 @@ def _request(model, schema, effort):
     }
     if model == "claude-opus-5-5":
         request["speed"] = "fast"
+        request["betas"].append("fast-mode-2026-02-01")
     return request
 ```
 
