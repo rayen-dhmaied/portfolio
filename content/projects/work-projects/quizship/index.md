@@ -21,7 +21,7 @@ I led QuizShip's development at CraftSchoolship and built both backend services,
 ### Why two services
 Python's libraries made the product side fast to build, but its support for WebSockets and concurrency is weaker. Go's goroutines (lightweight threads) suit long-lived game sessions, but rebuilding what Flask, SQLAlchemy, and the Stripe SDK provide would have cost months in Go and given users nothing new.
 
-The two services share the secret that signs login tokens (JWTs), so the Go service checks tokens itself without a network call. Go calls the Python service twice per game, to check the host's plan when the game is created and to save the result when it ends, because the Python service owns plans and results.
+The two services share the secret that signs login tokens (JWTs), so the Go service checks a token's signature itself. Go calls the Python service twice per game, to check the host's plan when the game is created and to save the result when it ends, because the Python service owns plans and results. The plan check also tells Go whether the host's session was revoked, which only the Python service knows, and Go asks the same before it saves an uploaded image.
 
 ### Outcome
 
@@ -32,7 +32,7 @@ The two services share the secret that signs login tokens (JWTs), so the Go serv
 - Tiered Stripe subscriptions with a metered AI quota. I rebuilt billing to handle late and out-of-order Stripe events, simultaneous requests, refunds, and disputes, and none of the original billing races has recurred in production.
 - Quiz generation with Claude from a prompt or a PDF, and launches from LMS courses through LTI 1.3, the standard LMSs use to open external tools.
 - Six game formats, each a separate module on the Go server and the frontend.
-- About 1,750 Python tests and a Go suite run under the race detector must pass before CI builds each image.
+- About 2,000 Python tests and a Go suite run under the race detector must pass before CI builds each image.
 :::
 
 ---
@@ -57,7 +57,7 @@ The Python service (Flask) handles auth, billing, content, AI generation, LTI, a
 - **Game state.** After each burst of player events the game encodes its state, and a panic (Go's unhandled runtime error) rolls the game back to it while the pod keeps running. That state goes to Redis as the game's snapshot, so another pod can take the game over. Snapshots were 62% of the estimated AWS cost at 30,000 players, so they are gzipped and written at most every 2 seconds. A pod that crashes instead of shutting down cleanly can lose up to 2 seconds of play.
 - **Results.** Each finished game's result goes into an outbox in Redis, a queue that holds it until the Python service accepts it. Retries back off exponentially, a time-limited claim (lease) stops two pods from posting the same result, and entries that run out of retries move to a dead-letter set. An outage of the Python service delays results and loses none.
 - **Billing and margins.** Every payment, refund, and dispute goes into a ledger that feeds MRR (monthly recurring revenue), ARPU (average revenue per user), the paid churn rate, and MRR movements split into new, expansion, contraction, and churn. Each AI generation records its tokens and cost, and the admin view shows AI spend per account next to the plan's price, which gives each tier's margin. Plans are cached, and during a Stripe outage feature checks use a cached plan up to 7 days old.
-- **Security.** LTI 1.3 launches verify the LMS's signed ID token against its published signing keys (JWKS), fetched only from public HTTPS hosts to block server-side request forgery (SSRF). The editor token goes in the URL fragment, which browsers don't send to the server, so it never reaches server logs. A revoked session stops working on its next request, and auth, billing, and AI routes are rate limited.
+- **Sessions and security.** Signing in gives the page a 15-minute access token and sets a 30-day refresh token in an httpOnly cookie, which the page's scripts can't read. Each refresh replaces the refresh token, and if a replaced one is used again, the session ends, because someone else holds a copy. A password change or reset, a ban, and a deletion end every session of the account, including a sign-in made while the change was being saved. Emailed links are stored only as hashes, and the signup form doesn't reveal which emails have an account. Auth, billing, and AI routes are rate limited, and wrong passwords are also limited per account. LTI 1.3 launches verify the LMS's signed ID token against its published signing keys (JWKS), fetched only from public HTTPS hosts to block server-side request forgery (SSRF). The tokens a launch hands out go in the URL fragment, which browsers don't send to the server, so they never reach server logs.
 - **Delivery.** Helm packages both services and the Celery workers, ArgoCD keeps the cluster in sync with Git (GitOps), and CI builds each image only after its tests pass. Prometheus and Grafana alert on latency, error rate, uptime, and stuck background jobs.
 
 ### Frontend
